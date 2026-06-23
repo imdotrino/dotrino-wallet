@@ -93,6 +93,11 @@ onMounted(async () => {
       <span>· {{ t('tagline') }}</span>
     </div>
     <div class="topbar-actions">
+      <dotrino-install
+        class="install-btn"
+        :lang="lang"
+        style="--cc-install-color:var(--text);--cc-install-bg:var(--bg-elev);--cc-install-bg-hover:var(--bg-elev);--cc-install-radius:999px;--cc-install-pad:9px 15px;--cc-install-font-size:.9rem;--cc-install-accent:var(--accent);--cc-install-modal-bg:#161b22;--cc-install-modal-color:var(--text)"
+      ></dotrino-install>
       <button class="btn btn-ghost" data-testid="import-open" @click="openImport()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5M12 15V3" /></svg>
         {{ t('import') }}

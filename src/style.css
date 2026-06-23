@@ -50,6 +50,14 @@ button { font-family: inherit; cursor: pointer; }
 .brand span { color: var(--text-faint); font-size: .82rem; }
 .topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
+/* Botón Instalar (Web Component): borde acorde a los demás de la topbar.
+   El componente se autooculta si la PWA no es instalable. */
+.install-btn::part(button) {
+  border: 1px solid var(--border);
+  font-weight: 600;
+}
+.install-btn::part(button):hover { border-color: var(--text-faint); }
+
 .lang-selector {
   display: inline-flex;
   border: 1px solid var(--border);
