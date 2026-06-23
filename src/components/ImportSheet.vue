@@ -88,8 +88,10 @@ function doImport () {
                   style="min-height:110px;font-family:ui-monospace,monospace;font-size:.82rem"></textarea>
       </div>
 
-      <input ref="fileInput" type="file" accept=".ics,.vcf,.pkpass,text/calendar,text/vcard,application/vnd.apple.pkpass"
-             multiple style="display:none" @change="handleFiles($event.target.files)" />
+      <!-- Sin `accept` restrictivo: en móvil el selector OCULTA/agrisa .ics y .pkpass
+           cuando el SO no reconoce su MIME (un .pkpass es un zip → application/octet-stream;
+           un .ics a veces text/plain). El tipo real se valida en handleFiles(). -->
+      <input ref="fileInput" type="file" multiple style="display:none" @change="handleFiles($event.target.files)" />
 
       <div v-if="pendingPasses.length" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
         <span v-for="(p, i) in pendingPasses" :key="i" class="chip">🎟 {{ p.title }}</span>
