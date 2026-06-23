@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.dotrino.wallet",
+      "sha256_cert_fingerprints": [
+        "57:73:8C:12:95:20:6D:BC:25:1E:A2:57:49:D0:29:A7:05:C3:88:83:3F:D7:2D:BF:4D:64:59:02:D2:BA:B2:D7"
+      ]
+    }
+  }
+]
