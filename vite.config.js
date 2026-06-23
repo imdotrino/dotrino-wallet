@@ -1,0 +1,72 @@
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import { VitePWA } from 'vite-plugin-pwa'
+import basicSsl from '@vitejs/plugin-basic-ssl'
+import { execSync } from 'node:child_process'
+import { fileURLToPath, URL } from 'node:url'
+
+// <meta name="commit"> con el hash del commit del build: permite ver a simple
+// vista (Ver código fuente / document.querySelector) qué versión sirve el
+// dominio — clave para diagnosticar cachés viejas. Normado en CONVENCIONES-APPS.
+function commitMeta () {
+  let hash = 'dev'
+  try { hash = execSync('git rev-parse --short HEAD').toString().trim() } catch { /* sin git */ }
+  return {
+    name: 'commit-meta',
+    transformIndexHtml: (html) =>
+      html.replace('</head>', `  <meta name="commit" content="${hash}" />\n  </head>`),
+  }
+}
+
+export default defineConfig(({ command }) => ({
+  base: './',
+  resolve: {
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
+  plugins: [
+    // Los `dotrino-*` son Web Components (custom elements), no componentes Vue.
+    vue({ template: { compilerOptions: { isCustomElement: (tag) => tag.startsWith('dotrino-') } } }),
+    // HTTPS autofirmado en desarrollo (contexto seguro para el vault del store,
+    // portapapeles y Web Share). El navegador avisará del cert no confiable: aceptar.
+    basicSsl(),
+    commitMeta(),
+    VitePWA({
+      // DESARROLLO (serve): SW autodestructivo → sirve siempre contenido fresco.
+      // PRODUCCIÓN (build): SW real y persistente, instalable y offline.
+      selfDestroying: command === 'serve',
+      registerType: 'autoUpdate',
+      includeAssets: ['icon.svg', 'og.jpg', 'robots.txt', 'sitemap.xml'],
+      manifest: {
+        name: 'Agenda',
+        short_name: 'Agenda',
+        description: 'Tu billetera de eventos .ics: guárdalos como tarjetas, en tu servidor. Sin anuncios ni rastreo.',
+        lang: 'es',
+        theme_color: '#0e1116',
+        background_color: '#0e1116',
+        display: 'standalone',
+        start_url: './',
+        scope: './',
+        launch_handler: { client_mode: 'focus-existing' },
+        icons: [
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      },
+      workbox: {
+        // Navegación network-first (los deploys se ven de inmediato); el resto
+        // de assets con caché y refresco en segundo plano.
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        navigateFallback: null,
+      },
+    }),
+  ],
+  server: {
+    host: true,
+    port: 3120,
+    allowedHosts: ['.ts.net', '.local', 'localhost'],
+  },
+}))

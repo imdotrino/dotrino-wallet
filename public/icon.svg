@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Agenda">
+  <!-- Fondo de marca (cubre todo: seguro para maskable) -->
+  <rect width="512" height="512" rx="112" fill="#0e1116"/>
+  <!-- Contenido dentro de la safe-zone (~inset 96 para maskable) -->
+  <g>
+    <!-- Tarjeta de atrás -->
+    <rect x="150" y="150" width="240" height="184" rx="26" fill="#1b2330" transform="rotate(-9 270 242)"/>
+    <!-- Tarjeta de adelante -->
+    <rect x="132" y="176" width="248" height="190" rx="26" fill="#ffffff"/>
+    <!-- Pestaña/encabezado de fecha -->
+    <path d="M132 202a26 26 0 0 1 26-26h196a26 26 0 0 1 26 26v34H132z" fill="#f4b740"/>
+    <!-- Anillas de la agenda -->
+    <rect x="186" y="160" width="14" height="40" rx="7" fill="#0e1116"/>
+    <rect x="312" y="160" width="14" height="40" rx="7" fill="#0e1116"/>
+    <!-- Líneas de contenido (evento) -->
+    <rect x="160" y="266" width="120" height="16" rx="8" fill="#cfd6e0"/>
+    <rect x="160" y="298" width="180" height="14" rx="7" fill="#4dd0c4"/>
+    <rect x="160" y="324" width="96" height="12" rx="6" fill="#9aa6b6"/>
+  </g>
+</svg>
