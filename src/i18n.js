@@ -3,7 +3,7 @@
 // localStorage (preferencia de UI efímera, permitido por §4).
 import { ref, computed } from 'vue'
 
-const STORE_KEY = 'agenda.lang'
+const STORE_KEY = 'wallet.lang'
 
 const messages = {
   es: {

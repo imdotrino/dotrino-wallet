@@ -7,7 +7,7 @@
 // SUMMARY/LOCATION/DESCRIPTION/URL y RRULE (con cálculo best-effort de la
 // próxima ocurrencia). No expande recurrencias completas ni VTIMEZONE.
 
-const PRODID = '-//Dotrino//Agenda//ES'
+const PRODID = '-//Dotrino//Wallet//ES'
 
 // ---------- utilidades de texto ----------
 
@@ -183,7 +183,7 @@ export function parseICS (text) {
 // ---------- serialize ----------
 
 export function eventToICS (ev) {
-  const uid = ev.uid || `${cryptoId()}@agenda.dotrino.com`
+  const uid = ev.uid || `${cryptoId()}@wallet.dotrino.com`
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', `PRODID:${PRODID}`, 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT']
   lines.push(`UID:${uid}`)
   lines.push(`DTSTAMP:${msToUtcBasic(Date.now())}`)
