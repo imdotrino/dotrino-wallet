@@ -52,6 +52,20 @@ export default defineConfig(({ command }) => ({
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // File Handling API: registra la PWA instalada como opción para ABRIR
+        // estos tipos de archivo (Android WebAPK / Chrome-Edge escritorio). El
+        // launchQueue (en App.vue) recibe los archivos abiertos.
+        file_handlers: [
+          {
+            action: './',
+            accept: {
+              'text/calendar': ['.ics', '.ifb', '.ical'],
+              'text/vcard': ['.vcf', '.vcard'],
+              'text/x-vcard': ['.vcf'],
+              'application/vnd.apple.pkpass': ['.pkpass'],
+            },
+          },
+        ],
       },
       workbox: {
         // Navegación network-first (los deploys se ven de inmediato); el resto

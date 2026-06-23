@@ -4,7 +4,7 @@ import { useWallet } from '@/stores/items.js'
 import { lang, setLang, t } from '@/i18n.js'
 import { eventToICS } from '@/lib/ics.js'
 import { contactToVCF } from '@/lib/vcf.js'
-import { parsePkpass, b64ToBytes } from '@/lib/pkpass.js'
+import { parsePkpass, b64ToBytes, bytesToB64, looksLikeZip } from '@/lib/pkpass.js'
 import EventCard from '@/components/EventCard.vue'
 import EventDetail from '@/components/EventDetail.vue'
 import EventForm from '@/components/EventForm.vue'
@@ -119,9 +119,36 @@ async function handleIncoming () {
   }
 }
 
+// ---------- archivos abiertos con la app (File Handling API) ----------
+async function handleFiles (files) {
+  let text = ''
+  const passes = []
+  for (const f of files) {
+    if (!f) continue
+    const isPkpass = /\.pkpass$/i.test(f.name || '') || (f.type || '').includes('pkpass')
+    const ab = await f.arrayBuffer()
+    if (isPkpass || looksLikeZip(ab)) {
+      try { passes.push({ ...(await parsePkpass(ab)), type: 'pass', rawB64: bytesToB64(new Uint8Array(ab)) }) } catch {}
+    } else {
+      text += (text ? '\n' : '') + new TextDecoder().decode(new Uint8Array(ab))
+    }
+  }
+  if (text || passes.length) openImport(text, passes)
+}
+
+function setupLaunchQueue () {
+  if (!('launchQueue' in window) || !('LaunchParams' in window) || !('files' in window.LaunchParams.prototype)) return
+  window.launchQueue.setConsumer(async (params) => {
+    const files = []
+    for (const h of params.files || []) { try { files.push(await h.getFile()) } catch {} }
+    if (files.length) await handleFiles(files)
+  })
+}
+
 const tabIsEmpty = computed(() => store.tabIsEmpty)
 
 onMounted(async () => {
+  setupLaunchQueue() // registra el consumidor cuanto antes (los launch params se encolan)
   await store.load()
   // arranca en la primera pestaña con contenido
   const firstWith = TABS.find((t) => store.counts[t] > 0)
