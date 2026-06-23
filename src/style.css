@@ -91,6 +91,28 @@ button { font-family: inherit; cursor: pointer; }
 .btn-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); }
 .btn-icon { padding: 9px; border-radius: 50%; }
 
+/* ---------- pestañas ---------- */
+.tabs {
+  display: flex; gap: 4px;
+  padding: 8px clamp(12px, 4vw, 28px) 0;
+  max-width: 920px; margin: 0 auto;
+  overflow-x: auto; scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--border); background: var(--bg-elev);
+  color: var(--text-dim); padding: 8px 16px; border-radius: 999px;
+  font-size: .92rem; font-weight: 600; white-space: nowrap;
+}
+.tab.on { background: var(--accent); color: #1a1407; border-color: transparent; }
+.tab-count {
+  font-size: .72rem; font-weight: 700; min-width: 18px; height: 18px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; background: rgba(0,0,0,.18);
+}
+.tab:not(.on) .tab-count { background: var(--bg-card); color: var(--text-dim); }
+
 /* ---------- layout ---------- */
 .wrap { max-width: 920px; margin: 0 auto; padding: 18px clamp(12px, 4vw, 28px) 120px; }
 

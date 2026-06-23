@@ -37,9 +37,9 @@ export default defineConfig(({ command }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'og.jpg', 'robots.txt', 'sitemap.xml'],
       manifest: {
-        name: 'Agenda',
-        short_name: 'Agenda',
-        description: 'Tu billetera de eventos .ics: guárdalos como tarjetas, en tu servidor. Sin anuncios ni rastreo.',
+        name: 'Wallet',
+        short_name: 'Wallet',
+        description: 'Tu billetera digital: eventos (.ics), contactos (.vcf) y pases (.pkpass) como tarjetas, en tu servidor. Sin anuncios ni rastreo.',
         lang: 'es',
         theme_color: '#0e1116',
         background_color: '#0e1116',

@@ -1,12 +1,12 @@
 // Capa fina sobre @dotrino/store (OBLIGATORIO como almacén del usuario, §4 de
-// CONVENCIONES-APPS). Modelamos los eventos como un único "hilo" cuyas entradas
-// son los eventos. El store es append-only con id estable: para editar borramos
-// la entrada y la volvemos a añadir con el mismo id (upsert).
+// CONVENCIONES-APPS). Wallet guarda tres tipos de tarjeta (event/contact/pass)
+// en un único "hilo" cuyas entradas llevan un campo `type`. Append-only con id
+// estable: editar = borrar + volver a añadir con el mismo id (upsert).
 
 import { Store } from '@dotrino/store'
 
-const THREAD = 'events'
-const APP_ID = 'agenda.dotrino.com'
+const THREAD = 'items'
+const APP_ID = 'wallet.dotrino.com'
 
 let store = null
 
@@ -19,16 +19,16 @@ export async function getStore () {
   return store
 }
 
-export async function loadEvents () {
+export async function loadItems () {
   const s = await getStore()
   const entries = await s.listThread(THREAD, { limit: 5000 })
-  return entries.filter((e) => e && e.id && e.start)
+  return entries.filter((e) => e && e.id && e.type)
 }
 
 // Upsert: si ya existe una entrada con ese id la reemplaza.
-export async function saveEvent (ev) {
+export async function saveItem (item) {
   const s = await getStore()
-  const entry = { ...ev }
+  const entry = { ...item }
   if (!entry.id) entry.id = newId()
   entry.ts = Date.now()
   await s.removeMessage(THREAD, entry.id).catch(() => {})
@@ -36,14 +36,9 @@ export async function saveEvent (ev) {
   return entry
 }
 
-export async function deleteEvent (id) {
+export async function deleteItem (id) {
   const s = await getStore()
   await s.removeMessage(THREAD, id)
-}
-
-export async function statsInfo () {
-  const s = await getStore()
-  return s.getStats()
 }
 
 export function newId () {

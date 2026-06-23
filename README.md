@@ -1,9 +1,9 @@
-# Agenda · Dotrino
+# Wallet · Dotrino
 
-**Tu billetera de eventos.** Guarda invitaciones y archivos `.ics` como
-**tarjetas**, en tu propio servidor (vía `@dotrino/store`). Sin rejilla de
-calendario: una colección ordenada por proximidad (Hoy · Esta semana · Próximos
-· Pasados) que puedes buscar, editar, exportar y compartir.
+**Tu billetera digital.** Guarda **eventos** (`.ics`), **contactos** (`.vcf`) y
+**pases** (`.pkpass` — tarjetas de embarque, entradas, cupones) como **tarjetas**,
+en tu propio servidor (vía `@dotrino/store`). Organizadas en pestañas, buscables,
+con importar / crear / editar / compartir / exportar.
 
 > **Parte del ecosistema [Dotrino](https://dotrino.com).** Misión: aplicaciones
 > que resuelven problemas comunes, respetando tu privacidad — sin anuncios, sin
@@ -11,24 +11,33 @@ calendario: una colección ordenada por proximidad (Hoy · Esta semana · Próxi
 
 ## Qué hace
 
-- **Importa** eventos `.ics` (pega el contenido, suelta o elige un archivo). Soporta
-  varios `VEVENT` por archivo, eventos de todo el día, con hora (UTC/local) y
-  recurrentes (`RRULE`, con cálculo de la próxima ocurrencia).
-- **Crea** eventos a mano con un formulario simple.
-- Cada evento es una **tarjeta** con su color, fecha, lugar y badges (todo el
-  día / se repite).
-- **Comparte** un evento por enlace `#fragment` + QR (`<dotrino-share>`): el
-  contenido viaja en el fragmento, **nunca** llega al servidor.
-- **Exporta** `.ics` o **añade al calendario** del dispositivo.
+- **Eventos `.ics`**: importa/crea/edita, agrupados por proximidad (Hoy · Esta
+  semana · Próximos · Pasados), todo el día y recurrentes; exporta o añade al
+  calendario del dispositivo.
+- **Contactos `.vcf`**: importa/crea/edita tarjetas de contacto (teléfono, correo,
+  organización, dirección, foto); llama/escribe; exporta `.vcf`.
+- **Pases `.pkpass`**: importa pases de Apple/Google Wallet y míralos con su look
+  (logo, colores, campos, código). Exporta el `.pkpass` original o ábrelo en la
+  Wallet nativa.
+- **Compartir** cualquier tarjeta por enlace `#fragment` + QR (`<dotrino-share>`):
+  el contenido viaja en el fragmento, **nunca** llega al servidor.
 - **Bilingüe** es/en, **PWA** instalable y offline.
+
+### Notas sobre `.pkpass`
+
+El `.pkpass` es un ZIP firmado; lo descomprimimos en el navegador con
+`DecompressionStream` (sin librería de ZIP) y parseamos `pass.json`. El código
+**QR** se renderiza fiel; **PDF417/Aztec/Code128** no se rasterizan sin una
+librería pesada, así que para esos se muestra el valor y un QR de respaldo —
+para escanear en la puerta, **exporta el `.pkpass` original** o ábrelo en la
+Wallet nativa (que además valida la firma). Los pases no se crean a mano.
 
 ## Privacidad
 
-- Todo se guarda en **tu** almacén del ecosistema (`store.dotrino.com`, IndexedDB
-  local, con sync cifrado opcional a tu Drive). No hay backend propio.
-- El contenido compartido viaja por `#fragment` (no indexable, no llega al
-  servidor). Analítica cookieless autohosteada (GoatCounter), solo en producción.
-- Sin trackers de terceros, sin cookies, sin anuncios.
+Todo se guarda en **tu** almacén del ecosistema (`store.dotrino.com`, IndexedDB
+local, sync cifrado opcional a tu Drive). No hay backend propio. El contenido
+compartido viaja por `#fragment` (no indexable). Analítica cookieless
+autohosteada (GoatCounter), solo en producción. Sin trackers de terceros.
 
 ## Desarrollo
 
@@ -38,11 +47,13 @@ npm run dev      # https local (cert autofirmado: aceptar)
 npm run build    # -> dist/
 ```
 
-Stack: Vite + Vue 3 + Pinia. El parser/serializer iCalendar (`src/lib/ics.js`) es
-propio y sin dependencias de terceros. Convenciones comunes del ecosistema en
+Stack: Vite + Vue 3 + Pinia. Parsers propios sin dependencias de terceros:
+`src/lib/ics.js` (iCalendar), `src/lib/vcf.js` (vCard), `src/lib/pkpass.js`
+(ZIP + pass.json). QR de pases con `qrcode`. Convenciones del ecosistema en
 [`CONVENCIONES-APPS.md`](../CONVENCIONES-APPS.md).
 
 ## Pendiente (v2)
 
 - Suscripción a **feeds webcal** (calendarios remotos que se refrescan).
 - Recordatorios/notificaciones (`@dotrino/notifications`).
+- Rasterizar barcodes PDF417/Aztec de los pases.

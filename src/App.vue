@@ -1,25 +1,36 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useEvents } from '@/stores/events.js'
+import { ref, computed, onMounted } from 'vue'
+import { useWallet } from '@/stores/items.js'
 import { lang, setLang, t } from '@/i18n.js'
 import { eventToICS } from '@/lib/ics.js'
+import { contactToVCF } from '@/lib/vcf.js'
+import { parsePkpass, b64ToBytes } from '@/lib/pkpass.js'
 import EventCard from '@/components/EventCard.vue'
 import EventDetail from '@/components/EventDetail.vue'
 import EventForm from '@/components/EventForm.vue'
+import ContactCard from '@/components/ContactCard.vue'
+import ContactDetail from '@/components/ContactDetail.vue'
+import ContactForm from '@/components/ContactForm.vue'
+import PassCard from '@/components/PassCard.vue'
+import PassDetail from '@/components/PassDetail.vue'
 import ImportSheet from '@/components/ImportSheet.vue'
 import iconUrl from '/icon.svg'
 
-const store = useEvents()
+const store = useWallet()
 
-const detailEvent = ref(null)
-const showForm = ref(false)
-const editing = ref(null)
+const TABS = ['event', 'contact', 'pass']
+const GROUP_ORDER = ['today', 'week', 'upcoming', 'past']
+
+const detail = ref(null)          // { type, item }
+const showEventForm = ref(false)
+const editingEvent = ref(null)
+const showContactForm = ref(false)
+const editingContact = ref(null)
 const showImport = ref(false)
 const importPrefill = ref('')
+const importPrefillPasses = ref([])
 const toast = ref('')
 const shareEl = ref(null)
-
-const GROUP_ORDER = ['today', 'week', 'upcoming', 'past']
 
 function flash (msg) {
   toast.value = msg
@@ -27,61 +38,95 @@ function flash (msg) {
 }
 
 // ---------- base64url para #fragment ----------
-function encodeFragment (str) {
+function toUrlSafe (b64) { return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') }
+function fromUrlSafe (s) { return s.replace(/-/g, '+').replace(/_/g, '/') }
+function encodeText (str) {
   const bytes = new TextEncoder().encode(str)
-  let bin = ''
-  bytes.forEach((b) => { bin += String.fromCharCode(b) })
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  let bin = ''; bytes.forEach((b) => { bin += String.fromCharCode(b) })
+  return toUrlSafe(btoa(bin))
 }
-function decodeFragment (b64) {
-  const bin = atob(b64.replace(/-/g, '+').replace(/_/g, '/'))
-  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
-  return new TextDecoder().decode(bytes)
+function decodeText (s) {
+  const bin = atob(fromUrlSafe(s))
+  return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)))
 }
 
-// ---------- acciones ----------
-function openNew () { editing.value = null; showForm.value = true }
-function openEdit (ev) { editing.value = ev; detailEvent.value = null; showForm.value = true }
-function openImport (prefill = '') { importPrefill.value = prefill; showImport.value = true }
-
-async function onSave (ev) {
-  await store.upsert(ev)
-  showForm.value = false
-  editing.value = null
-  flash(t('saved'))
+// ---------- alta / edición ----------
+function openAdd () {
+  if (store.tab === 'event') { editingEvent.value = null; showEventForm.value = true }
+  else if (store.tab === 'contact') { editingContact.value = null; showContactForm.value = true }
+  else openImport()
+}
+function openImport (prefill = '', passes = []) {
+  importPrefill.value = prefill
+  importPrefillPasses.value = passes
+  showImport.value = true
 }
 
-async function onDelete (ev) {
-  await store.remove(ev.id)
-  detailEvent.value = null
-  flash(t('deleted'))
-}
+function openDetail (type, item) { detail.value = { type, item } }
+function closeDetail () { detail.value = null }
 
-async function onImport (events) {
-  for (const ev of events) await store.upsert(ev)
+function editEvent (ev) { closeDetail(); editingEvent.value = ev; showEventForm.value = true }
+function editContact (c) { closeDetail(); editingContact.value = c; showContactForm.value = true }
+
+async function saveEvent (ev) {
+  await store.upsert({ ...ev, type: 'event' })
+  showEventForm.value = false; editingEvent.value = null
+  store.tab = 'event'; flash(t('saved'))
+}
+async function saveContact (c) {
+  await store.upsert({ ...c, type: 'contact' })
+  showContactForm.value = false; editingContact.value = null
+  store.tab = 'contact'; flash(t('saved'))
+}
+async function onDelete (item) { await store.remove(item.id); closeDetail(); flash(t('deleted')) }
+
+async function onImport (items) {
+  for (const it of items) await store.upsert(it)
   showImport.value = false
-  flash(`${events.length} ${t('imported')}`)
-  // limpia el fragmento entrante
+  // salta a la pestaña del primer tipo importado
+  if (items[0]) store.tab = items[0].type
+  flash(`${items.length} ${t('imported')}`)
   if (location.hash) history.replaceState(null, '', location.pathname + location.search)
 }
 
-function shareEvent (ev) {
-  const url = `${location.origin}${location.pathname}#ev=${encodeFragment(eventToICS(ev))}`
+// ---------- compartir ----------
+function shareItem (item) {
+  let frag = ''
+  if (item.type === 'event') frag = 'ev=' + encodeText(eventToICS(item))
+  else if (item.type === 'contact') frag = 'vc=' + encodeText(contactToVCF(item))
+  else if (item.type === 'pass') frag = 'pk=' + toUrlSafe(item.rawB64)
   const el = shareEl.value
   if (!el) return
-  el.url = url
-  el.text = ev.title || t('appName')
+  el.url = `${location.origin}${location.pathname}#${frag}`
+  el.text = item.title || item.fn || t('appName')
   el.setAttribute('lang', lang.value)
   el.open = true
 }
 
+// ---------- recepción por #fragment ----------
+async function handleIncoming () {
+  const h = location.hash
+  let m
+  if ((m = h.match(/[#&]ev=([^&]+)/))) { try { openImport(decodeText(m[1])) } catch {} }
+  else if ((m = h.match(/[#&]vc=([^&]+)/))) { try { openImport(decodeText(m[1])) } catch {} }
+  else if ((m = h.match(/[#&]pk=([^&]+)/))) {
+    try {
+      const rawB64 = fromUrlSafe(m[1])
+      const bytes = b64ToBytes(rawB64)
+      const parsed = await parsePkpass(bytes.buffer)
+      openImport('', [{ ...parsed, type: 'pass', rawB64 }])
+    } catch {}
+  }
+}
+
+const tabIsEmpty = computed(() => store.tabIsEmpty)
+
 onMounted(async () => {
   await store.load()
-  // ¿Llegó un evento compartido por #fragment?
-  const m = location.hash.match(/[#&]ev=([^&]+)/)
-  if (m) {
-    try { openImport(decodeFragment(m[1])) } catch { /* fragmento inválido */ }
-  }
+  // arranca en la primera pestaña con contenido
+  const firstWith = TABS.find((t) => store.counts[t] > 0)
+  if (firstWith) store.tab = firstWith
+  await handleIncoming()
 })
 </script>
 
@@ -102,7 +147,7 @@ onMounted(async () => {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5M12 15V3" /></svg>
         {{ t('import') }}
       </button>
-      <button class="btn btn-primary desktop-add" data-testid="add-open" @click="openNew">
+      <button v-if="store.tab !== 'pass'" class="btn btn-primary desktop-add" data-testid="add-open" @click="openAdd">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
         {{ t('add') }}
       </button>
@@ -113,43 +158,72 @@ onMounted(async () => {
     </div>
   </header>
 
+  <nav class="tabs" role="tablist">
+    <button v-for="tb in TABS" :key="tb" class="tab" :class="{ on: store.tab === tb }"
+            role="tab" :aria-selected="store.tab === tb" :data-testid="'tab-' + tb" @click="store.tab = tb">
+      {{ t('tabs.' + tb) }}
+      <span v-if="store.counts[tb]" class="tab-count">{{ store.counts[tb] }}</span>
+    </button>
+  </nav>
+
   <main class="wrap">
     <div class="searchbar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
       <input v-model="store.query" type="search" data-testid="search" :placeholder="t('search')" :aria-label="t('search')" />
     </div>
 
-    <div v-if="store.isEmpty" class="empty">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-      <h2>{{ t('empty') }}</h2>
-      <p>{{ t('emptyHint') }}</p>
-      <button class="btn btn-primary" @click="openNew" style="display:inline-flex">{{ t('newEvent') }}</button>
+    <!-- vacío -->
+    <div v-if="tabIsEmpty && !store.query" class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="3" /><path d="M2 10h20" /></svg>
+      <h2>{{ t('empty.' + store.tab + 'Title') }}</h2>
+      <p>{{ t('empty.' + store.tab + 'Hint') }}</p>
+      <button v-if="store.tab !== 'pass'" class="btn btn-primary" style="display:inline-flex" @click="openAdd">
+        {{ store.tab === 'event' ? t('newEvent') : t('newContact') }}
+      </button>
+      <button v-else class="btn btn-primary" style="display:inline-flex" @click="openImport()">{{ t('import') }}</button>
+    </div>
+    <div v-else-if="tabIsEmpty" class="empty" style="padding:8vh 0">{{ t('noResults') }}</div>
+
+    <!-- EVENTOS -->
+    <template v-else-if="store.tab === 'event'">
+      <section v-for="key in GROUP_ORDER" :key="key" v-show="store.eventGroups[key].length">
+        <h3 class="group-title">{{ t('groups.' + key) }}</h3>
+        <div class="cards">
+          <EventCard v-for="ev in store.eventGroups[key]" :key="ev.id" :event="ev" @open="openDetail('event', $event)" />
+        </div>
+      </section>
+    </template>
+
+    <!-- CONTACTOS -->
+    <div v-else-if="store.tab === 'contact'" class="cards">
+      <ContactCard v-for="c in store.contactsSorted" :key="c.id" :contact="c" @open="openDetail('contact', $event)" />
     </div>
 
-    <template v-else>
-      <template v-for="key in GROUP_ORDER" :key="key">
-        <section v-if="store.groups[key].length">
-          <h3 class="group-title">{{ t('groups.' + key) }}</h3>
-          <div class="cards">
-            <EventCard v-for="ev in store.groups[key]" :key="ev.id" :event="ev" @open="detailEvent = $event" />
-          </div>
-        </section>
-      </template>
-      <p v-if="store.query && !GROUP_ORDER.some(k => store.groups[k].length)" class="empty" style="padding:8vh 0">
-        {{ t('noResults') }}
-      </p>
-    </template>
+    <!-- PASES -->
+    <div v-else class="cards">
+      <PassCard v-for="p in store.passesSorted" :key="p.id" :pass="p" @open="openDetail('pass', $event)" />
+    </div>
   </main>
 
-  <button class="fab" data-testid="add-fab" :aria-label="t('add')" @click="openNew">
+  <button v-if="store.tab !== 'pass'" class="fab" data-testid="add-fab" :aria-label="t('add')" @click="openAdd">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
   </button>
 
-  <EventDetail v-if="detailEvent" :event="detailEvent"
-    @edit="openEdit" @delete="onDelete" @share="shareEvent" @close="detailEvent = null" />
-  <EventForm v-if="showForm" :event="editing"
-    @save="onSave" @cancel="showForm = false; editing = null" />
-  <ImportSheet v-if="showImport" :prefill="importPrefill"
+  <!-- detalles -->
+  <EventDetail v-if="detail && detail.type === 'event'" :event="detail.item"
+    @edit="editEvent" @delete="onDelete" @share="shareItem" @close="closeDetail" />
+  <ContactDetail v-if="detail && detail.type === 'contact'" :contact="detail.item"
+    @edit="editContact" @delete="onDelete" @share="shareItem" @close="closeDetail" />
+  <PassDetail v-if="detail && detail.type === 'pass'" :pass="detail.item"
+    @delete="onDelete" @share="shareItem" @close="closeDetail" />
+
+  <!-- formularios -->
+  <EventForm v-if="showEventForm" :event="editingEvent"
+    @save="saveEvent" @cancel="showEventForm = false; editingEvent = null" />
+  <ContactForm v-if="showContactForm" :contact="editingContact"
+    @save="saveContact" @cancel="showContactForm = false; editingContact = null" />
+
+  <ImportSheet v-if="showImport" :prefill="importPrefill" :prefillPasses="importPrefillPasses"
     @import="onImport" @cancel="showImport = false" />
 
   <dotrino-share
