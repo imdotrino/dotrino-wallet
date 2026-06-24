@@ -18,7 +18,11 @@ export const useWallet = defineStore('wallet', () => {
   }
 
   async function upsert (item) {
-    const saved = await saveItem(item)
+    // El item puede venir de un ref de Vue (Proxy reactivo); el store guarda por
+    // postMessage al iframe y NO puede clonar un Proxy (DataCloneError). Lo aplanamos
+    // a un objeto plano serializable (JSON round-trip lee a través de los proxies).
+    const plain = JSON.parse(JSON.stringify(item))
+    const saved = await saveItem(plain)
     const i = items.value.findIndex((e) => e.id === saved.id)
     if (i >= 0) items.value[i] = saved
     else items.value.push(saved)

@@ -136,15 +136,11 @@ async function handleFiles (files) {
   if (text || passes.length) openImport(text, passes)
 }
 
-function lqlog (m) { try { const k = 'lqlog'; localStorage.setItem(k, ((localStorage.getItem(k) || '') + '|' + m).slice(-500)) } catch (e) {} }
 function setupLaunchQueue () {
-  lqlog('setup ' + new Date().toLocaleTimeString())
-  if (!('launchQueue' in window) || !('LaunchParams' in window) || !('files' in window.LaunchParams.prototype)) { lqlog('NO-API'); return }
+  if (!('launchQueue' in window) || !('LaunchParams' in window) || !('files' in window.LaunchParams.prototype)) return
   window.launchQueue.setConsumer(async (params) => {
-    lqlog('FIRED files=' + (params && params.files ? params.files.length : 'none'))
     const files = []
-    for (const h of params.files || []) { try { files.push(await h.getFile()) } catch (e) { lqlog('getFile-ERR ' + e.message) } }
-    lqlog('got ' + files.length + ' file(s)')
+    for (const h of params.files || []) { try { files.push(await h.getFile()) } catch {} }
     if (files.length) await handleFiles(files)
   })
 }
