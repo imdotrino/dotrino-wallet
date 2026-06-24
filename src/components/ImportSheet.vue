@@ -24,6 +24,9 @@ const CONTACT_COLORS = ['#4dd0c4', '#f4b740', '#ff6b6b', '#9b8cff', '#6fcf73']
 const events = computed(() => parseICS(text.value).events)
 const contacts = computed(() => parseVCF(text.value).contacts)
 const total = computed(() => events.value.length + contacts.value.length + pendingPasses.value.length)
+// ¿Se abrió desde un archivo/share (con contenido) y no pegando a mano? → vista limpia
+// (sin el textarea crudo, que confunde): solo lo detectado + Guardar.
+const fromContent = computed(() => (props.prefill && props.prefill.trim().length > 0) || props.prefillPasses.length > 0)
 
 const summary = computed(() => {
   const w = (n, s, p) => `${n} ${n === 1 ? t('words.' + s) : t('words.' + p)}`
@@ -78,27 +81,35 @@ function doImport () {
         </button>
       </div>
 
-      <div class="dropzone" :class="{ drag: dragging }"
-           @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="onDrop">
-        {{ t('pasteHint') }}
-      </div>
-
-      <div class="field">
-        <textarea v-model="text" data-testid="import-text" placeholder="BEGIN:VCALENDAR… / BEGIN:VCARD…"
-                  style="min-height:110px;font-family:ui-monospace,monospace;font-size:.82rem"></textarea>
-      </div>
+      <!-- Modo MANUAL (pegar texto): se oculta cuando se abre desde un archivo/share. -->
+      <template v-if="!fromContent">
+        <div class="dropzone" :class="{ drag: dragging }"
+             @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="onDrop">
+          {{ t('pasteHint') }}
+        </div>
+        <div class="field">
+          <textarea v-model="text" data-testid="import-text" placeholder="BEGIN:VCALENDAR… / BEGIN:VCARD…"
+                    style="min-height:110px;font-family:ui-monospace,monospace;font-size:.82rem"></textarea>
+        </div>
+      </template>
 
       <!-- Sin `accept` restrictivo: en móvil el selector OCULTA/agrisa .ics y .pkpass
            cuando el SO no reconoce su MIME (un .pkpass es un zip → application/octet-stream;
            un .ics a veces text/plain). El tipo real se valida en handleFiles(). -->
       <input ref="fileInput" type="file" multiple style="display:none" @change="handleFiles($event.target.files)" />
 
-      <div v-if="pendingPasses.length" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+      <!-- Modo ARCHIVO: vista limpia de lo detectado (chips), sin textarea crudo. -->
+      <div v-if="fromContent && total" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+        <span v-for="(e, i) in events" :key="'e' + i" class="chip" style="justify-content:flex-start">📅 {{ e.title || 'Evento' }}</span>
+        <span v-for="(c, i) in contacts" :key="'c' + i" class="chip" style="justify-content:flex-start">👤 {{ c.fn || 'Contacto' }}</span>
+        <span v-for="(p, i) in pendingPasses" :key="'p' + i" class="chip" style="justify-content:flex-start">🎟 {{ p.title }}</span>
+      </div>
+      <div v-else-if="pendingPasses.length" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
         <span v-for="(p, i) in pendingPasses" :key="i" class="chip">🎟 {{ p.title }}</span>
       </div>
 
       <div class="sheet-actions">
-        <button class="btn btn-ghost" data-testid="import-file" @click="pick">
+        <button v-if="!fromContent" class="btn btn-ghost" data-testid="import-file" @click="pick">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5M12 15V3" /></svg>
           {{ t('chooseFile') }}
         </button>
@@ -109,7 +120,7 @@ function doImport () {
 
       <p v-if="error" class="err" style="margin-top:12px">{{ error }}</p>
       <p v-else-if="(text || pendingPasses.length) && !total" class="err" style="margin-top:12px">{{ t('parsedNone') }}</p>
-      <p v-else-if="total" style="color:var(--accent-2);font-size:.86rem;margin-top:12px;font-weight:600">{{ summary }}</p>
+      <p v-else-if="total && !fromContent" style="color:var(--accent-2);font-size:.86rem;margin-top:12px;font-weight:600">{{ summary }}</p>
     </div>
   </div>
 </template>

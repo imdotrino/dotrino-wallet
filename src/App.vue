@@ -2,8 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useWallet } from '@/stores/items.js'
 import { lang, setLang, t } from '@/i18n.js'
-import { eventToICS } from '@/lib/ics.js'
-import { contactToVCF } from '@/lib/vcf.js'
+import { eventToICS, parseICS } from '@/lib/ics.js'
+import { contactToVCF, parseVCF } from '@/lib/vcf.js'
 import { parsePkpass, b64ToBytes, bytesToB64, looksLikeZip } from '@/lib/pkpass.js'
 import EventCard from '@/components/EventCard.vue'
 import EventDetail from '@/components/EventDetail.vue'
@@ -103,23 +103,48 @@ function shareItem (item) {
   el.open = true
 }
 
-// ---------- recepción por #fragment ----------
+// ---------- importación AUTOMÁTICA (archivo / link / share): sin hoja ni Guardar ----------
+const EVENT_COLORS = ['#f4b740', '#4dd0c4', '#9b8cff', '#6fcf73', '#ff9f43']
+const CONTACT_COLORS = ['#4dd0c4', '#f4b740', '#ff6b6b', '#9b8cff', '#6fcf73']
+
+function buildItems (text, passes) {
+  const out = []
+  parseICS(text || '').events.forEach((e, i) => out.push({ ...e, type: 'event', id: store.newId(), color: EVENT_COLORS[i % EVENT_COLORS.length], source: 'import' }))
+  parseVCF(text || '').contacts.forEach((c, i) => out.push({ ...c, type: 'contact', id: store.newId(), color: CONTACT_COLORS[i % CONTACT_COLORS.length], source: 'import' }))
+  ;(passes || []).forEach((p) => out.push({ ...p, id: store.newId(), source: 'import' }))
+  return out
+}
+
+// Importa directo (con dedup en el store) y ABRE el ítem importado. Sin pasar por la hoja.
+async function importAndOpen (text, passes) {
+  const items = buildItems(text, passes)
+  if (!items.length) return
+  const saved = []
+  for (const it of items) saved.push(await store.upsert(it))
+  const first = saved[0]
+  store.tab = first.type
+  openDetail(first.type, first)
+  flash(`${saved.length} ${t('imported')}`)
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search)
+}
+
+// ---------- recepción por #fragment (link compartido / FileImportActivity de la TWA) ----------
 async function handleIncoming () {
   const h = location.hash
   let m
-  if ((m = h.match(/[#&]ev=([^&]+)/))) { try { openImport(decodeText(m[1])) } catch {} }
-  else if ((m = h.match(/[#&]vc=([^&]+)/))) { try { openImport(decodeText(m[1])) } catch {} }
+  if ((m = h.match(/[#&]ev=([^&]+)/))) { try { await importAndOpen(decodeText(m[1]), []) } catch {} }
+  else if ((m = h.match(/[#&]vc=([^&]+)/))) { try { await importAndOpen(decodeText(m[1]), []) } catch {} }
   else if ((m = h.match(/[#&]pk=([^&]+)/))) {
     try {
       const rawB64 = fromUrlSafe(m[1])
       const bytes = b64ToBytes(rawB64)
       const parsed = await parsePkpass(bytes.buffer)
-      openImport('', [{ ...parsed, type: 'pass', rawB64 }])
+      await importAndOpen('', [{ ...parsed, type: 'pass', rawB64 }])
     } catch {}
   }
 }
 
-// ---------- archivos abiertos con la app (File Handling API) ----------
+// ---------- archivos abiertos con la app (File Handling API / share-target) ----------
 async function handleFiles (files) {
   let text = ''
   const passes = []
@@ -133,7 +158,7 @@ async function handleFiles (files) {
       text += (text ? '\n' : '') + new TextDecoder().decode(new Uint8Array(ab))
     }
   }
-  if (text || passes.length) openImport(text, passes)
+  if (text || passes.length) await importAndOpen(text, passes)
 }
 
 function setupLaunchQueue () {

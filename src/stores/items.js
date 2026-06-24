@@ -17,7 +17,20 @@ export const useWallet = defineStore('wallet', () => {
     try { items.value = await loadItems() } finally { loading.value = false }
   }
 
+  function sameImported (a, b) {
+    if (a.type !== b.type) return false
+    if (a.type === 'event') return (!!a.uid && a.uid === b.uid) || (!!a.title && a.title === b.title && a.start === b.start)
+    if (a.type === 'pass') return !!a.serial && a.serial === b.serial
+    if (a.type === 'contact') return !!a.fn && a.fn === b.fn
+    return false
+  }
   async function upsert (item) {
+    // Dedup al IMPORTAR: si ya existe el mismo evento (uid o título+fecha) / pase (serial) /
+    // contacto (nombre), reusar su id → actualiza en vez de duplicar. Solo para imports.
+    if (item && item.source === 'import') {
+      const ex = items.value.find((e) => sameImported(e, item))
+      if (ex) item = { ...item, id: ex.id }
+    }
     // El item puede venir de un ref de Vue (Proxy reactivo); el store guarda por
     // postMessage al iframe y NO puede clonar un Proxy (DataCloneError). Lo aplanamos
     // a un objeto plano serializable (JSON round-trip lee a través de los proxies).
