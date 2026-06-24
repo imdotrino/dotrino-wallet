@@ -24,6 +24,9 @@ export const useWallet = defineStore('wallet', () => {
     if (a.type === 'contact') return !!a.fn && a.fn === b.fn
     return false
   }
+  // ¿Ya existe un ítem equivalente? (para distinguir "importado" de "ya existente").
+  function exists (item) { return items.value.some((e) => sameImported(e, item)) }
+
   async function upsert (item) {
     // Dedup al IMPORTAR: si ya existe el mismo evento (uid o título+fecha) / pase (serial) /
     // contacto (nombre), reusar su id → actualiza en vez de duplicar. Solo para imports.
@@ -104,7 +107,7 @@ export const useWallet = defineStore('wallet', () => {
 
   return {
     items, loading, query, tab,
-    load, upsert, remove, newId,
+    load, upsert, remove, newId, exists,
     counts, visible, eventGroups, contactsSorted, passesSorted, tabIsEmpty, allEmpty,
   }
 })

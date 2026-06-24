@@ -119,12 +119,16 @@ function buildItems (text, passes) {
 async function importAndOpen (text, passes) {
   const items = buildItems(text, passes)
   if (!items.length) return
+  let nuevos = 0
   const saved = []
-  for (const it of items) saved.push(await store.upsert(it))
+  for (const it of items) {
+    if (!store.exists(it)) nuevos++ // chequear ANTES del upsert (que lo agrega)
+    saved.push(await store.upsert(it))
+  }
   const first = saved[0]
   store.tab = first.type
   openDetail(first.type, first)
-  flash(`${saved.length} ${t('imported')}`)
+  flash(nuevos > 0 ? `${nuevos} ${t('imported')}` : t('alreadyHave'))
   if (location.hash) history.replaceState(null, '', location.pathname + location.search)
 }
 
