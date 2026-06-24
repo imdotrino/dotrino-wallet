@@ -190,7 +190,7 @@ onMounted(async () => {
       <dotrino-install
         class="install-btn"
         :lang="lang"
-        android-apk="https://github.com/imdotrino/dotrino-wallet/releases/download/twa-v1.0.0/wallet-1.0.0.apk"
+        android-apk="https://wallet.dotrino.com/app/wallet-1.0.0.apk"
         android-package="com.dotrino.wallet"
         style="--cc-install-color:var(--text);--cc-install-bg:var(--bg-elev);--cc-install-bg-hover:var(--bg-elev);--cc-install-radius:999px;--cc-install-pad:9px 15px;--cc-install-font-size:.9rem;--cc-install-accent:var(--accent);--cc-install-modal-bg:#161b22;--cc-install-modal-color:var(--text)"
       ></dotrino-install>
