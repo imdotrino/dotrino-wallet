@@ -64,6 +64,7 @@ export default defineConfig(({ command }) => ({
             action: './',
             accept: {
               'text/calendar': ['.ics', '.ifb', '.ical'],
+              'application/ics': ['.ics'], // Gmail manda los .ics con este MIME (no text/calendar)
               'text/vcard': ['.vcf', '.vcard'],
               'text/x-vcard': ['.vcf'],
               'application/vnd.apple.pkpass': ['.pkpass'],
