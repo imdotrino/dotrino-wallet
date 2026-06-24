@@ -145,6 +145,27 @@ function setupLaunchQueue () {
   })
 }
 
+// Web Share Target: el SW (share-target-sw.js) guardó los archivos compartidos
+// en Cache Storage y redirigió con ?share-target=N. Los leemos y los importamos.
+async function handleShareTarget () {
+  const n = new URLSearchParams(location.search).get('share-target')
+  if (n == null) return
+  history.replaceState(null, '', location.pathname) // limpia la query
+  try {
+    const cache = await caches.open('wallet-share')
+    const files = []
+    for (const req of await cache.keys()) {
+      const res = await cache.match(req)
+      if (!res) continue
+      const blob = await res.blob()
+      const name = decodeURIComponent(res.headers.get('x-filename') || 'archivo')
+      files.push(new File([blob], name, { type: res.headers.get('content-type') || '' }))
+      await cache.delete(req)
+    }
+    if (files.length) await handleFiles(files)
+  } catch { /* sin caché de compartir */ }
+}
+
 const tabIsEmpty = computed(() => store.tabIsEmpty)
 
 onMounted(async () => {
@@ -153,6 +174,7 @@ onMounted(async () => {
   // arranca en la primera pestaña con contenido
   const firstWith = TABS.find((t) => store.counts[t] > 0)
   if (firstWith) store.tab = firstWith
+  await handleShareTarget()
   await handleIncoming()
 })
 </script>

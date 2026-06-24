@@ -52,9 +52,9 @@ export default defineConfig(({ command }) => ({
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
-        // File Handling API: registra la PWA instalada como opción para ABRIR
-        // estos tipos de archivo (Android WebAPK / Chrome-Edge escritorio). El
-        // launchQueue (en App.vue) recibe los archivos abiertos.
+        // File Handling API: "Abrir con Wallet". OJO: solo Chrome/Edge de
+        // ESCRITORIO; en Android (WebAPK) NO está soportada — ahí se usa
+        // share_target (abajo). El launchQueue (App.vue) recibe los archivos.
         file_handlers: [
           {
             action: './',
@@ -66,6 +66,19 @@ export default defineConfig(({ command }) => ({
             },
           },
         ],
+        // Web Share Target: en Android hace que Wallet aparezca en el menú
+        // COMPARTIR al enviar un .ics/.vcf/.pkpass desde otra app. El POST lo
+        // intercepta el service worker (public/share-target-sw.js).
+        share_target: {
+          action: './share-target',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            files: [
+              { name: 'file', accept: ['text/calendar', 'text/vcard', 'text/x-vcard', 'application/vnd.apple.pkpass', '.ics', '.vcf', '.pkpass'] },
+            ],
+          },
+        },
       },
       workbox: {
         // Navegación network-first (los deploys se ven de inmediato); el resto
@@ -75,6 +88,8 @@ export default defineConfig(({ command }) => ({
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         navigateFallback: null,
+        // Handler del Web Share Target (POST con archivos) inyectado en el SW.
+        importScripts: ['share-target-sw.js'],
       },
     }),
   ],

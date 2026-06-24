@@ -1,0 +1,7 @@
+wallet-release.jks
+keystore.properties
+node_modules/
+*.keystore
+.gradle/
+build/
+app/build/
