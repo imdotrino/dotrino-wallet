@@ -47,6 +47,10 @@ export default defineConfig(({ command }) => ({
         start_url: './',
         scope: './',
         launch_handler: { client_mode: 'focus-existing' },
+        // En Android, getInstalledRelatedApps() puede detectar la TWA instalada
+        // (com.dotrino.wallet) → el <dotrino-install> se oculta. Sin
+        // prefer_related_applications para no suprimir el prompt PWA en desktop.
+        related_applications: [{ platform: 'play', id: 'com.dotrino.wallet' }],
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
