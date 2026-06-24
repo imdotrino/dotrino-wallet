@@ -128,7 +128,7 @@ async function importAndOpen (text, passes) {
   const first = saved[0]
   store.tab = first.type
   openDetail(first.type, first)
-  flash(nuevos > 0 ? `${nuevos} ${t('imported')}` : t('alreadyHave'))
+  flash(`DBG ${first.type} "${first.title || first.fn || '∅'}" @${first.start || '∅'} n=${saved.length}`)
   if (location.hash) history.replaceState(null, '', location.pathname + location.search)
 }
 

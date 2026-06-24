@@ -40,8 +40,10 @@ export const useWallet = defineStore('wallet', () => {
     const plain = JSON.parse(JSON.stringify(item))
     const saved = await saveItem(plain)
     const i = items.value.findIndex((e) => e.id === saved.id)
-    if (i >= 0) items.value[i] = saved
-    else items.value.push(saved)
+    // Reasignar el array (nueva referencia) garantiza que los computeds reaccionen
+    // de inmediato (un push a veces no refrescaba la lista hasta cambiar de tab).
+    if (i >= 0) { const arr = items.value.slice(); arr[i] = saved; items.value = arr }
+    else items.value = [...items.value, saved]
     return saved
   }
 
