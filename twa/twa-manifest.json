@@ -15,7 +15,7 @@
   "startUrl": "/",
   "iconUrl": "https://wallet.dotrino.com/icons/icon-512.png",
   "maskableIconUrl": "https://wallet.dotrino.com/icons/icon-maskable-512.png",
-  "appVersionCode": 4,
+  "appVersionCode": 5,
   "shortcuts": [],
   "signingKey": {
     "path": "./wallet-release.jks",
@@ -34,16 +34,5 @@
   "minSdkVersion": 21,
   "webManifestUrl": "https://wallet.dotrino.com/manifest.webmanifest",
   "splashScreenFadeOutDuration": 300,
-  "fileHandlers": [
-    {
-      "actionUrl": "https://wallet.dotrino.com/",
-      "mimeTypes": [
-        "text/calendar",
-        "text/vcard",
-        "text/x-vcard",
-        "application/vnd.apple.pkpass"
-      ]
-    }
-  ],
-  "appVersion": "1.0.3"
+  "appVersion": "1.0.4"
 }
