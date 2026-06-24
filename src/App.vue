@@ -137,15 +137,11 @@ async function handleFiles (files) {
 }
 
 function setupLaunchQueue () {
-  if (!('launchQueue' in window)) { flash('DBG: navegador SIN launchQueue'); return }
-  if (!('LaunchParams' in window) || !('files' in window.LaunchParams.prototype)) { flash('DBG: SIN LaunchParams.files'); return }
+  if (!('launchQueue' in window) || !('LaunchParams' in window) || !('files' in window.LaunchParams.prototype)) return
   window.launchQueue.setConsumer(async (params) => {
-    const n = params && params.files ? params.files.length : -1
-    flash('DBG launchQueue disparó: ' + n + ' files')
     const files = []
-    for (const h of params.files || []) { try { files.push(await h.getFile()) } catch (e) { flash('DBG getFile ERROR: ' + e.message) } }
+    for (const h of params.files || []) { try { files.push(await h.getFile()) } catch {} }
     if (files.length) await handleFiles(files)
-    else flash('DBG: 0 archivos tras getFile')
   })
 }
 
