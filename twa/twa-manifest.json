@@ -34,5 +34,16 @@
   "fullScopeUrl": "https://wallet.dotrino.com/",
   "minSdkVersion": 21,
   "webManifestUrl": "https://wallet.dotrino.com/manifest.webmanifest",
-  "splashScreenFadeOutDuration": 300
+  "splashScreenFadeOutDuration": 300,
+  "fileHandlers": [
+    {
+      "actionUrl": "https://wallet.dotrino.com/",
+      "mimeTypes": [
+        "text/calendar",
+        "text/vcard",
+        "text/x-vcard",
+        "application/vnd.apple.pkpass"
+      ]
+    }
+  ]
 }

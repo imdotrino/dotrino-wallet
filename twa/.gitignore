@@ -1,7 +1,19 @@
+# secretos de firma — NUNCA commitear
 wallet-release.jks
 keystore.properties
-node_modules/
 *.keystore
+# proyecto Android generado (reproducible con `bubblewrap update`)
+app/
+gradle/
+gradlew
+gradlew.bat
+build.gradle
+settings.gradle
+gradle.properties
 .gradle/
 build/
-app/build/
+store_icon.png
+# outputs
+*.apk
+*.aab
+node_modules/
