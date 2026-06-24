@@ -15,7 +15,6 @@
   "startUrl": "/",
   "iconUrl": "https://wallet.dotrino.com/icons/icon-512.png",
   "maskableIconUrl": "https://wallet.dotrino.com/icons/icon-maskable-512.png",
-  "appVersionName": "1.0.0",
   "appVersionCode": 1,
   "shortcuts": [],
   "signingKey": {
@@ -45,5 +44,6 @@
         "application/vnd.apple.pkpass"
       ]
     }
-  ]
+  ],
+  "appVersion": "1.0.0"
 }
