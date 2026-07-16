@@ -1,7 +1,10 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watchEffect, onMounted } from 'vue'
 import { useWallet } from '@/stores/items.js'
 import { lang, setLang, t } from '@/i18n.js'
+import '@dotrino/topbar'
+import { getIdentity } from '@/services/identity.js'
+import { getReputation } from '@/services/reputation.js'
 import { eventToICS, parseICS } from '@/lib/ics.js'
 import { contactToVCF, parseVCF } from '@/lib/vcf.js'
 import { parsePkpass, b64ToBytes, bytesToB64, looksLikeZip } from '@/lib/pkpass.js'
@@ -31,6 +34,49 @@ const importPrefill = ref('')
 const importPrefillPasses = ref([])
 const toast = ref('')
 const shareEl = ref(null)
+
+// ---------- topbar del ecosistema (§5) + "Mi perfil" (§6.1) ----------
+// El modal de perfil lo abre y lo posee el propio <dotrino-topbar>: le pasamos
+// los pilares (identidad + reputación) y el tema por PROPIEDAD JS, y con eso
+// deriva pubkey, nombre y avatar del perfil activo.
+const topbarRef = ref(null)
+const identityInst = ref(null)
+const reputationInst = ref(null)
+
+// Tema del modal de perfil, acorde al oscuro de Wallet (--ccp-*).
+const profileTheme = {
+  '--ccp-bg': 'var(--bg-elev)',
+  '--ccp-bg-2': 'var(--bg-card)',
+  '--ccp-bg-3': 'var(--bg-card)',
+  '--ccp-bg-4': 'var(--border)',
+  '--ccp-border': 'var(--border)',
+  '--ccp-text': 'var(--text)',
+  '--ccp-muted': 'var(--text-dim)',
+  '--ccp-accent': 'var(--accent)',
+  '--ccp-accent-2': 'var(--accent-2)',
+  '--ccp-accent-text': '#1a1407',
+  '--ccp-gold': 'var(--accent)',
+  '--ccp-derived': 'var(--accent-2)',
+  '--ccp-online': 'var(--accent-2)',
+  '--ccp-affinity': 'var(--accent-2)',
+  '--ccp-input-bg': 'var(--bg)',
+  '--ccp-radius': '16px',
+}
+
+watchEffect(() => {
+  const tb = topbarRef.value
+  if (!tb) return
+  tb.identity = identityInst.value ?? null
+  tb.reputation = reputationInst.value ?? null
+  tb.profileTheme = profileTheme
+})
+
+// El toggle de idioma vive en el topbar y es la fuente de verdad (él ya lo
+// persistió en 'dotrino.lang'); aquí solo seguimos su evento.
+function onLang (e) {
+  const l = e?.detail?.lang
+  if (l === 'es' || l === 'en') setLang(l)
+}
 
 function flash (msg) {
   toast.value = msg
@@ -199,6 +245,12 @@ const tabIsEmpty = computed(() => store.tabIsEmpty)
 
 onMounted(async () => {
   setupLaunchQueue() // registra el consumidor cuanto antes (los launch params se encolan)
+  // Pilares del botón de perfil del topbar (§6.1). Sin vault quedan en null: el
+  // botón no abre nada y Wallet sigue funcionando igual.
+  getIdentity().then(async (id) => {
+    identityInst.value = id
+    if (id) reputationInst.value = await getReputation()
+  })
   await store.load()
   // arranca en la primera pestaña con contenido
   const firstWith = TABS.find((t) => store.counts[t] > 0)
@@ -209,13 +261,28 @@ onMounted(async () => {
 </script>
 
 <template>
-  <header class="topbar">
-    <div class="brand">
+  <!-- Barra superior estándar del ecosistema (§5): el volver, el toggle de
+       idioma, el botón de perfil (§6.1) y la moneda de support vienen DENTRO del
+       componente. Aquí solo van la marca a medida (slot "brand") y las acciones
+       propias de Wallet (slot "end"). -->
+  <dotrino-topbar
+    ref="topbarRef"
+    brand-href="./"
+    :lang.attr="lang"
+    profile
+    support-href="https://ko-fi.com/dotrino"
+    support-repo="imdotrino/dotrino-wallet"
+    support-discord="https://discord.gg/D648uq7cth"
+    @dotrino-lang="onLang"
+  >
+    <div slot="brand" class="brand">
       <img :src="iconUrl" alt="" />
       <b>{{ t('appName') }}</b>
       <span>· {{ t('tagline') }}</span>
     </div>
-    <div class="topbar-actions">
+    <!-- Un solo contenedor: el cluster derecho del topbar es row-reverse, así
+         que agrupamos para conservar el orden visual de siempre. -->
+    <div slot="end" class="topbar-actions">
       <dotrino-install
         class="install-btn"
         :lang="lang"
@@ -231,12 +298,8 @@ onMounted(async () => {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
         {{ t('add') }}
       </button>
-      <div class="lang-selector" role="group" aria-label="es / en">
-        <button :class="{ on: lang === 'es' }" @click="setLang('es')">ES</button>
-        <button :class="{ on: lang === 'en' }" @click="setLang('en')">EN</button>
-      </div>
     </div>
-  </header>
+  </dotrino-topbar>
 
   <nav class="tabs" role="tablist">
     <button v-for="tb in TABS" :key="tb" class="tab" :class="{ on: store.tab === tb }"

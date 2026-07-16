@@ -1,9 +1,13 @@
 // i18n minimalista del ecosistema: reactivo, sin dependencias. Español neutro
 // (tuteo, SIN voseo) e inglés. Detecta el idioma del navegador y lo persiste en
 // localStorage (preferencia de UI efímera, permitido por §4).
+//
+// El toggle vive en <dotrino-topbar> y es la fuente de verdad: persiste en la
+// clave COMÚN del ecosistema ('dotrino.lang'), así el idioma viaja entre apps.
 import { ref, computed } from 'vue'
 
-const STORE_KEY = 'wallet.lang'
+const STORE_KEY = 'dotrino.lang'
+const OLD_KEY = 'wallet.lang' // preferencia vieja, solo de Wallet
 
 const messages = {
   es: {
@@ -147,16 +151,26 @@ const messages = {
 }
 
 function detect () {
-  const saved = localStorage.getItem(STORE_KEY)
-  if (saved === 'es' || saved === 'en') return saved
+  try {
+    const saved = localStorage.getItem(STORE_KEY)
+    if (saved === 'es' || saved === 'en') return saved
+    // Migración UNA vez de la clave vieja: quien ya eligió idioma no se resetea.
+    const old = localStorage.getItem(OLD_KEY)
+    if (old === 'es' || old === 'en') {
+      localStorage.setItem(STORE_KEY, old)
+      localStorage.removeItem(OLD_KEY)
+      return old
+    }
+  } catch (_) { /* modo privado */ }
   return (navigator.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es'
 }
 
 export const lang = ref(detect())
 
 export function setLang (l) {
+  if (l !== 'es' && l !== 'en') return
   lang.value = l
-  localStorage.setItem(STORE_KEY, l)
+  try { localStorage.setItem(STORE_KEY, l) } catch (_) { /* modo privado */ }
   document.documentElement.lang = l
 }
 

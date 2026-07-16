@@ -31,24 +31,31 @@ html, body {
 button { font-family: inherit; cursor: pointer; }
 
 /* ---------- topbar ---------- */
-.topbar {
+/* Barra superior = <dotrino-topbar> (§5). El componente ya trae el volver, el
+   toggle de idioma, el botón de perfil y la moneda de support; aquí solo lo
+   anclamos arriba (su .bar no es sticky) y lo tematizamos con los colores de
+   Wallet. */
+dotrino-topbar {
   position: sticky;
   top: 0;
   z-index: 20;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: calc(env(safe-area-inset-top) + 12px) clamp(12px, 4vw, 28px) 12px;
-  background: color-mix(in srgb, var(--bg) 86%, transparent);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border-soft);
+  --dotrino-topbar-bg: color-mix(in srgb, var(--bg) 86%, transparent);
+  --dotrino-topbar-border: var(--border-soft);
+  --dotrino-topbar-text: var(--text);
+  --dotrino-topbar-muted: var(--text-dim);
+  --dotrino-topbar-accent: var(--accent);
+  --dotrino-topbar-accent-text: #1a1407;
+  --dotrino-topbar-gap: 10px;
 }
-.brand { display: flex; align-items: center; gap: 10px; user-select: none; }
+dotrino-topbar::part(profile) { border-color: var(--border); }
+
+/* La marca y las acciones viajan por slot → viven en el light DOM y las estila
+   esta hoja (no ::part). */
+.brand { display: flex; align-items: center; gap: 10px; user-select: none; min-width: 0; }
 .brand img { width: 30px; height: 30px; display: block; }
 .brand b { font-size: 1.15rem; letter-spacing: .2px; }
 .brand span { color: var(--text-faint); font-size: .82rem; }
-.topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 /* Botón Instalar (Web Component): borde acorde a los demás de la topbar.
    El componente se autooculta si la PWA no es instalable. */
@@ -57,22 +64,6 @@ button { font-family: inherit; cursor: pointer; }
   font-weight: 600;
 }
 .install-btn::part(button):hover { border-color: var(--text-faint); }
-
-.lang-selector {
-  display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  overflow: hidden;
-}
-.lang-selector button {
-  border: 0;
-  background: transparent;
-  color: var(--text-dim);
-  padding: 6px 11px;
-  font-size: .8rem;
-  font-weight: 600;
-}
-.lang-selector button.on { background: var(--accent); color: #1a1407; }
 
 /* botones de acción */
 .btn {
@@ -252,7 +243,12 @@ button { font-family: inherit; cursor: pointer; }
 .fab svg { width: 26px; height: 26px; }
 
 @media (max-width: 560px) {
-  .topbar-actions { flex-basis: 100%; justify-content: flex-end; order: 2; }
+  /* El topbar reparte el ancho entre la marca y las acciones: con el lema
+     puesto, la marca se queda con casi todo y los botones caen de a uno por
+     fila. En móvil la marca es solo el logo + el nombre y las acciones bajan
+     juntas a una segunda fila alineada a la derecha (§5). */
+  .brand span { display: none; }
+  .topbar-actions { justify-content: flex-end; }
   .desktop-add { display: none; }
   .fab { display: inline-flex; }
 }

@@ -4,8 +4,8 @@ import App from './App.vue'
 import './style.css'
 
 // Web Components compartidos del ecosistema (custom elements, no Vue):
-// compartir (QR + redes) e instalar PWA. El support se carga por CDN (@0.6)
-// desde index.html.
+// compartir (QR + redes) e instalar PWA. La barra superior (<dotrino-topbar>,
+// que ya trae la moneda de support) se importa desde App.vue.
 import '@dotrino/share'
 import '@dotrino/install'
 import { createBackNav } from '@dotrino/nav'
