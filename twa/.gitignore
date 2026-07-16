@@ -17,3 +17,6 @@ store_icon.png
 *.apk
 *.aab
 node_modules/
+# artefactos de build (los regenera `bubblewrap build`)
+*.idsig
+manifest-checksum.txt
