@@ -4,6 +4,7 @@
 // estable: editar = borrar + volver a añadir con el mismo id (upsert).
 
 import { Store } from '@dotrino/store'
+import { getIdentity } from '@/services/identity.js'
 
 const THREAD = 'items'
 const APP_ID = 'wallet.dotrino.com'
@@ -12,8 +13,14 @@ let store = null
 
 export async function getStore () {
   if (store) return store
-  store = await Store.connect()
-  await store.setMaxPerThread(5000).catch(() => {})
+  // Atado al PERFIL: así lo tuyo se respalda en tu bóveda y no se mezcla con otras
+  // cuentas del aparato. Hasta 2026-09-30 conectaba sin identidad y todo quedaba en el
+  // espacio común del navegador, sin respaldo; `adoptCommon` lo trae al perfil una vez
+  // (sin borrar el original). Sin identidad NO se sigue: caer al espacio común otra vez
+  // sería perder el respaldo en silencio.
+  const identity = await getIdentity()
+  if (!identity) throw Object.assign(new Error('the identity (id.dotrino.com) is not available'), { code: 'no-identity' })
+  store = await Store.connect({ identity, maxPerThread: 5000, adoptCommon: [THREAD] })
   // "Recientes" del ecosistema: registra la apertura de la app.
   store.recordOpen(APP_ID).catch(() => {})
   return store

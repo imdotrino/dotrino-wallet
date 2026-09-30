@@ -4,6 +4,7 @@ import { useWallet } from '@/stores/items.js'
 import { lang, setLang, t } from '@/i18n.js'
 import '@dotrino/topbar'
 import { getIdentity } from '@/services/identity.js'
+import { getStore } from '@/lib/store.js'
 import { getReputation } from '@/services/reputation.js'
 import { eventToICS, parseICS } from '@/lib/ics.js'
 import { contactToVCF, parseVCF } from '@/lib/vcf.js'
@@ -69,6 +70,13 @@ watchEffect(() => {
   tb.identity = identityInst.value ?? null
   tb.reputation = reputationInst.value ?? null
   tb.profileTheme = profileTheme
+})
+
+// El estado del respaldo en la bóveda, a la vista en el botón de perfil (topbar ≥ 0.13).
+watchEffect(() => {
+  const tb = topbarRef.value
+  if (!tb || !identityInst.value) return
+  getStore().then((s) => { tb.store = s }).catch(() => {})
 })
 
 // El toggle de idioma vive en el topbar y es la fuente de verdad (él ya lo
@@ -251,7 +259,10 @@ onMounted(async () => {
     identityInst.value = id
     if (id) reputationInst.value = await getReputation()
   })
-  await store.load()
+  try { await store.load() } catch (e) {
+    console.error('[wallet] store:', e)
+    flash(t('storeError'))
+  }
   // arranca en la primera pestaña con contenido
   const firstWith = TABS.find((t) => store.counts[t] > 0)
   if (firstWith) store.tab = firstWith

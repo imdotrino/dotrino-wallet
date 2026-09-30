@@ -81,6 +81,7 @@ const messages = {
     alreadyHave: 'Ya lo tenías',
     copied: 'Copiado',
     pkpassError: 'No se pudo leer el .pkpass.',
+    storeError: 'No se pudo abrir tu almacén. Recarga la página.',
   },
   en: {
     appName: 'Wallet',
@@ -147,6 +148,7 @@ const messages = {
     alreadyHave: 'Already in your wallet',
     copied: 'Copied',
     pkpassError: 'Could not read the .pkpass.',
+    storeError: 'Could not open your storage. Reload the page.',
   },
 }
 
