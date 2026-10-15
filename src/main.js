@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
+import '@dotrino/theme/theme.css'
 import './style.css'
 
 // Web Components compartidos del ecosistema (custom elements, no Vue):

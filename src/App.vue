@@ -44,32 +44,11 @@ const topbarRef = ref(null)
 const identityInst = ref(null)
 const reputationInst = ref(null)
 
-// Tema del modal de perfil, acorde al oscuro de Wallet (--ccp-*).
-const profileTheme = {
-  '--ccp-bg': 'var(--bg-elev)',
-  '--ccp-bg-2': 'var(--bg-card)',
-  '--ccp-bg-3': 'var(--bg-card)',
-  '--ccp-bg-4': 'var(--border)',
-  '--ccp-border': 'var(--border)',
-  '--ccp-text': 'var(--text)',
-  '--ccp-muted': 'var(--text-dim)',
-  '--ccp-accent': 'var(--accent)',
-  '--ccp-accent-2': 'var(--accent-2)',
-  '--ccp-accent-text': '#1a1407',
-  '--ccp-gold': 'var(--accent)',
-  '--ccp-derived': 'var(--accent-2)',
-  '--ccp-online': 'var(--accent-2)',
-  '--ccp-affinity': 'var(--accent-2)',
-  '--ccp-input-bg': 'var(--bg)',
-  '--ccp-radius': '16px',
-}
-
 watchEffect(() => {
   const tb = topbarRef.value
   if (!tb) return
   tb.identity = identityInst.value ?? null
   tb.reputation = reputationInst.value ?? null
-  tb.profileTheme = profileTheme
 })
 
 // El estado del respaldo en la bóveda, a la vista en el botón de perfil (topbar ≥ 0.13).
@@ -281,7 +260,7 @@ onMounted(async () => {
     ref="topbarRef"
     brand-href="./"
     :lang.attr="lang"
-    profile
+    profile theme
     support-href="https://ko-fi.com/dotrino"
     support-repo="imdotrino/dotrino-wallet"
     support-discord="https://discord.gg/D648uq7cth"
@@ -384,7 +363,7 @@ onMounted(async () => {
   <dotrino-share
     ref="shareEl"
     :lang="lang"
-    style="--ccs-bg:#161b22;--ccs-text:#e6edf3;--ccs-muted:#9aa6b6;--ccs-border:#2a3340;--ccs-accent:#f4b740;--ccs-accent-text:#1a1407;--ccs-input-bg:#0e1116;--ccs-overlay:rgba(4,7,11,.6)"
+    style="--ccs-bg:var(--dt-surface);--ccs-text:var(--dt-text);--ccs-muted:var(--dt-text-dim);--ccs-border:var(--dt-line-soft);--ccs-accent:var(--dt-accent);--ccs-accent-text:var(--dt-accent-ink);--ccs-input-bg:var(--dt-surface-2);--ccs-overlay:rgba(4,7,11,.6)"
     @cc-share-close="shareEl && (shareEl.open = false)"
   ></dotrino-share>
 
