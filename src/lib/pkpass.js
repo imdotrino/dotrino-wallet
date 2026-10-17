@@ -36,7 +36,7 @@ async function unzip (arrayBuffer) {
   for (let i = buf.length - 22; i >= 0; i--) {
     if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break }
   }
-  if (eocd < 0) throw new Error('No es un ZIP válido (.pkpass)')
+  if (eocd < 0) throw new Error('not a valid ZIP (.pkpass)')
   const count = dv.getUint16(eocd + 10, true)
   let off = dv.getUint32(eocd + 16, true) // offset del central directory
   const td = new TextDecoder()
@@ -90,7 +90,7 @@ function mapFields (arr) {
 
 export async function parsePkpass (arrayBuffer) {
   const files = await unzip(arrayBuffer)
-  if (!files['pass.json']) throw new Error('El .pkpass no contiene pass.json')
+  if (!files['pass.json']) throw new Error('the .pkpass does not contain pass.json')
   const pass = JSON.parse(new TextDecoder().decode(files['pass.json']))
   const style = STYLES.find((s) => pass[s]) || 'generic'
   const body = pass[style] || {}

@@ -152,17 +152,17 @@ function buildItems (text, passes) {
 async function importAndOpen (text, passes) {
   const items = buildItems(text, passes)
   if (!items.length) return
-  let nuevos = 0
+  let added = 0
   const saved = []
   for (const it of items) {
-    if (!store.exists(it)) nuevos++ // chequear ANTES del upsert (que lo agrega)
+    if (!store.exists(it)) added++ // chequear ANTES del upsert (que lo agrega)
     saved.push(await store.upsert(it))
   }
   const first = saved[0]
   store.tab = first.type
   openDetail(first.type, first)
   // Lo que se contó arriba es para esto: «ya lo tenías» si no entró nada nuevo.
-  flash(nuevos ? `${nuevos} ${t('imported')}` : t('alreadyHave'))
+  flash(added ? `${added} ${t('imported')}` : t('alreadyHave'))
   if (location.hash) history.replaceState(null, '', location.pathname + location.search)
 }
 
