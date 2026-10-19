@@ -4,7 +4,7 @@ import { t, lang } from '@/i18n.js'
 import { parseICS } from '@/lib/ics.js'
 import { parseVCF } from '@/lib/vcf.js'
 import { parsePkpass, looksLikeZip, bytesToB64 } from '@/lib/pkpass.js'
-import { newId } from '@/lib/store.js'
+import { buildImportItems } from '@/lib/import-items.js'
 
 const props = defineProps({
   prefill: { type: String, default: '' },
@@ -17,9 +17,6 @@ const pendingPasses = ref([...props.prefillPasses]) // pases ya parseados (binar
 const dragging = ref(false)
 const fileInput = ref(null)
 const error = ref('')
-
-const EVENT_COLORS = ['#f4b740', '#4dd0c4', '#9b8cff', '#6fcf73', '#ff9f43']
-const CONTACT_COLORS = ['#4dd0c4', '#f4b740', '#ff6b6b', '#9b8cff', '#6fcf73']
 
 const events = computed(() => parseICS(text.value).events)
 const contacts = computed(() => parseVCF(text.value).contacts)
@@ -62,11 +59,7 @@ function onDrop (e) { dragging.value = false; handleFiles(e.dataTransfer?.files)
 function pick () { fileInput.value?.click() }
 
 function doImport () {
-  const out = []
-  events.value.forEach((e, i) => out.push({ ...e, type: 'event', id: newId(), color: EVENT_COLORS[i % EVENT_COLORS.length], source: 'import' }))
-  contacts.value.forEach((c, i) => out.push({ ...c, type: 'contact', id: newId(), color: CONTACT_COLORS[i % CONTACT_COLORS.length], source: 'import' }))
-  pendingPasses.value.forEach((p) => out.push({ ...p, id: newId(), source: 'import' }))
-  emit('import', out)
+  emit('import', buildImportItems({ events: events.value, contacts: contacts.value, passes: pendingPasses.value }))
 }
 </script>
 

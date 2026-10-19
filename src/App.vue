@@ -18,6 +18,7 @@ import ContactForm from '@/components/ContactForm.vue'
 import PassCard from '@/components/PassCard.vue'
 import PassDetail from '@/components/PassDetail.vue'
 import ImportSheet from '@/components/ImportSheet.vue'
+import { buildImportItems } from '@/lib/import-items.js'
 import iconUrl from '/icon.svg'
 
 const store = useWallet()
@@ -137,15 +138,8 @@ function shareItem (item) {
 }
 
 // ---------- importación AUTOMÁTICA (archivo / link / share): sin hoja ni Guardar ----------
-const EVENT_COLORS = ['#f4b740', '#4dd0c4', '#9b8cff', '#6fcf73', '#ff9f43']
-const CONTACT_COLORS = ['#4dd0c4', '#f4b740', '#ff6b6b', '#9b8cff', '#6fcf73']
-
 function buildItems (text, passes) {
-  const out = []
-  parseICS(text || '').events.forEach((e, i) => out.push({ ...e, type: 'event', id: store.newId(), color: EVENT_COLORS[i % EVENT_COLORS.length], source: 'import' }))
-  parseVCF(text || '').contacts.forEach((c, i) => out.push({ ...c, type: 'contact', id: store.newId(), color: CONTACT_COLORS[i % CONTACT_COLORS.length], source: 'import' }))
-  ;(passes || []).forEach((p) => out.push({ ...p, id: store.newId(), source: 'import' }))
-  return out
+  return buildImportItems({ events: parseICS(text || '').events, contacts: parseVCF(text || '').contacts, passes: passes || [] })
 }
 
 // Importa directo (con dedup en el store) y ABRE el ítem importado. Sin pasar por la hoja.
