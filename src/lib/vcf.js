@@ -3,56 +3,15 @@
 // implementa local, sin dependencias de terceros. Cubre lo habitual: FN, N,
 // TEL, EMAIL, ORG, TITLE, ADR, URL, NOTE, BDAY y PHOTO embebida.
 
-function unfold (text) {
-  return String(text || '').replace(/\r\n/g, '\n').replace(/\n[ \t]/g, '')
-}
+import { unfold, unescapeText, escapeText, foldLine, parseLine as parseTextLine } from './text-lines.js'
 
-function unescapeText (s) {
-  return String(s == null ? '' : s)
-    .replace(/\\n/gi, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\')
-}
-function escapeText (s) {
-  return String(s == null ? '' : s)
-    .replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
-}
-
-function foldLine (line) {
-  const out = []
-  let s = line
-  while (s.length > 75) { out.push(s.slice(0, 75)); s = ' ' + s.slice(75) }
-  out.push(s)
-  return out.join('\r\n')
-}
-
-// "group.NAME;PARAM=val:VALUE" → { name, params, value }
+// "group.NAME;PARAM=val:VALUE" → { name, params, value }. En vCard se quita el
+// group ("item1.") y los parámetros sueltos (vCard 2.1: "TEL;CELL") van a TYPE.
 function parseLine (line) {
-  let i = 0, inQuotes = false
-  for (; i < line.length; i++) {
-    const c = line[i]
-    if (c === '"') inQuotes = !inQuotes
-    else if (c === ':' && !inQuotes) break
-  }
-  const head = line.slice(0, i)
-  const value = line.slice(i + 1)
-  const parts = []
-  let cur = ''; inQuotes = false
-  for (const c of head) {
-    if (c === '"') { inQuotes = !inQuotes; continue }
-    if (c === ';' && !inQuotes) { parts.push(cur); cur = ''; continue }
-    cur += c
-  }
-  parts.push(cur)
-  let name = parts[0]
-  if (name.includes('.')) name = name.split('.').pop() // quita el group "item1."
-  name = name.toUpperCase()
-  const params = {}
-  for (const p of parts.slice(1)) {
-    const eq = p.indexOf('=')
-    if (eq === -1) { params.TYPE = (params.TYPE ? params.TYPE + ',' : '') + p; continue }
-    const k = p.slice(0, eq).toUpperCase()
-    params[k] = p.slice(eq + 1)
-  }
-  return { name, params, value }
+  return parseTextLine(line, {
+    stripGroup: true,
+    onBareParam: (params, p) => { params.TYPE = (params.TYPE ? params.TYPE + ',' : '') + p },
+  })
 }
 
 function typeLabel (params) {

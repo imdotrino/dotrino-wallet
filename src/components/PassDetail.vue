@@ -1,14 +1,13 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { t } from '@/i18n.js'
-import { qrDataUrl } from '@/lib/qr.js'
+import { qrSvg } from '@dotrino/qr/svg'
 import { b64ToBytes } from '@/lib/pkpass.js'
 
 const props = defineProps({ pass: Object })
 const emit = defineEmits(['delete', 'share', 'close'])
 
 const confirming = ref(false)
-const qr = ref('')
 const bg = computed(() => props.pass.colors?.bg || '#1b222d')
 const fg = computed(() => props.pass.colors?.fg || '#fff')
 const label = computed(() => props.pass.colors?.label || fg.value)
@@ -36,8 +35,18 @@ function openInWallet () {
   setTimeout(() => URL.revokeObjectURL(url), 8000)
 }
 
-onMounted(async () => {
-  if (props.pass.barcode?.message) qr.value = await qrDataUrl(props.pass.barcode.message)
+// El QR lo dibuja el pilar (@dotrino/qr). PDF417/Aztec/Code128 no se rasterizan:
+// el llamador muestra el valor y un QR del mensaje como respaldo (barcodeFallback).
+const qr = computed(() => {
+  const msg = props.pass.barcode?.message
+  if (!msg) return ''
+  try {
+    return qrSvg(String(msg), { ecc: 'M', margin: 1 })
+  } catch (e) {
+    // Solo si el mensaje no cabe en un QR: se dice y queda el texto alternativo.
+    console.error('[wallet] could not render the pass QR:', e?.message || e)
+    return ''
+  }
 })
 </script>
 
@@ -67,7 +76,7 @@ onMounted(async () => {
         </div>
         <!-- barcode -->
         <div v-if="pass.barcode" class="pass-barcode">
-          <img v-if="qr" :src="qr" alt="barcode" />
+          <div v-if="qr" class="pass-qr" role="img" aria-label="barcode" v-html="qr"></div>
           <div class="pass-barcode-alt">{{ pass.barcode.altText || pass.barcode.message }}</div>
         </div>
         <div v-else class="pass-barcode"><div class="pass-barcode-alt">{{ t('noBarcode') }}</div></div>
@@ -111,6 +120,7 @@ onMounted(async () => {
 .pf-label { font-size: .62rem; text-transform: uppercase; letter-spacing: .06em; opacity: .85; }
 .pf-value { font-size: 1.02rem; font-weight: 700; overflow-wrap: anywhere; }
 .pass-barcode { background: #fff; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.pass-barcode img { width: 168px; height: 168px; image-rendering: pixelated; }
+.pass-qr { width: 168px; height: 168px; line-height: 0; }
+.pass-qr :deep(svg) { display: block; width: 100%; height: 100%; }
 .pass-barcode-alt { color: #111; font-size: .8rem; font-family: ui-monospace, monospace; text-align: center; overflow-wrap: anywhere; }
 </style>

@@ -7,72 +7,9 @@
 // SUMMARY/LOCATION/DESCRIPTION/URL y RRULE (con cálculo best-effort de la
 // próxima ocurrencia). No expande recurrencias completas ni VTIMEZONE.
 
+import { unfold, escapeText, unescapeText, foldLine, parseLine } from './text-lines.js'
+
 const PRODID = '-//Dotrino//Wallet//ES'
-
-// ---------- utilidades de texto ----------
-
-// Desdobla líneas plegadas (CRLF/LF seguido de espacio o tab continúa la línea).
-function unfold (text) {
-  return text.replace(/\r\n/g, '\n').replace(/\n[ \t]/g, '')
-}
-
-function escapeText (s) {
-  return String(s == null ? '' : s)
-    .replace(/\\/g, '\\\\')
-    .replace(/;/g, '\\;')
-    .replace(/,/g, '\\,')
-    .replace(/\r?\n/g, '\\n')
-}
-
-function unescapeText (s) {
-  return String(s == null ? '' : s)
-    .replace(/\\n/gi, '\n')
-    .replace(/\\,/g, ',')
-    .replace(/\\;/g, ';')
-    .replace(/\\\\/g, '\\')
-}
-
-// Pliega una línea a <=75 octetos (aprox. por caracteres) con CRLF + espacio.
-function foldLine (line) {
-  const out = []
-  let s = line
-  while (s.length > 75) {
-    out.push(s.slice(0, 75))
-    s = ' ' + s.slice(75)
-  }
-  out.push(s)
-  return out.join('\r\n')
-}
-
-// Separa "NOMBRE;PARAM=val:VALOR" respetando comillas en los parámetros.
-function parseLine (line) {
-  let i = 0
-  let inQuotes = false
-  for (; i < line.length; i++) {
-    const c = line[i]
-    if (c === '"') inQuotes = !inQuotes
-    else if (c === ':' && !inQuotes) break
-  }
-  const head = line.slice(0, i)
-  const value = line.slice(i + 1)
-  const parts = []
-  let cur = ''
-  inQuotes = false
-  for (const c of head) {
-    if (c === '"') { inQuotes = !inQuotes; continue }
-    if (c === ';' && !inQuotes) { parts.push(cur); cur = ''; continue }
-    cur += c
-  }
-  parts.push(cur)
-  const name = parts[0].toUpperCase()
-  const params = {}
-  for (const p of parts.slice(1)) {
-    const eq = p.indexOf('=')
-    if (eq === -1) continue
-    params[p.slice(0, eq).toUpperCase()] = p.slice(eq + 1)
-  }
-  return { name, params, value }
-}
 
 // ---------- fechas ----------
 
@@ -133,7 +70,7 @@ function localDateBasic (local) {
 // Parsea texto .ics → { events: [...], count }.
 // Cada evento: { uid, title, location, description, url, allDay, start, end, tz, rrule, raw }
 export function parseICS (text) {
-  const lines = unfold(String(text || '')).split('\n')
+  const lines = unfold(text).split('\n')
   const events = []
   let cur = null
   let rawLines = null
