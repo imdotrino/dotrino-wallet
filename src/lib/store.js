@@ -1,3 +1,4 @@
+import { newId } from './id.js'
 // Capa fina sobre @dotrino/store (OBLIGATORIO como almacén del usuario, §4 de
 // CONVENCIONES-APPS). Wallet guarda tres tipos de tarjeta (event/contact/pass)
 // en un único "hilo" cuyas entradas llevan un campo `type`. Append-only con id
@@ -48,6 +49,4 @@ export async function deleteItem (id) {
   await s.removeMessage(THREAD, id)
 }
 
-export function newId () {
-  try { return crypto.randomUUID() } catch { return 'id-' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36) }
-}
+export { newId } from './id.js'
