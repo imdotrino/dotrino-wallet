@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { t } from '@/i18n.js'
 import { contactToVCF } from '@/lib/vcf.js'
+import { downloadBlob, safeFilename } from '@/lib/download.js'
 
 const props = defineProps({ contact: Object })
 const emit = defineEmits(['edit', 'delete', 'share', 'close'])
@@ -11,11 +12,7 @@ const accent = computed(() => props.contact.color || 'var(--accent-2)')
 const initials = computed(() => (props.contact.fn || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase())
 
 function exportVcf () {
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(new Blob([contactToVCF(props.contact)], { type: 'text/vcard' }))
-  a.download = `${(props.contact.fn || 'contacto').replace(/[^\w\d-]+/g, '-').slice(0, 40)}.vcf`
-  document.body.appendChild(a); a.click(); a.remove()
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000)
+  downloadBlob(new Blob([contactToVCF(props.contact)], { type: 'text/vcard' }), safeFilename(props.contact.fn, 'contacto', 'vcf'))
 }
 </script>
 

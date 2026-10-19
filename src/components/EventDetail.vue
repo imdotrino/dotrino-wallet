@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { t, lang } from '@/i18n.js'
 import { formatWhen, eventToICS } from '@/lib/ics.js'
+import { downloadBlob, openBlob, safeFilename } from '@/lib/download.js'
 
 const props = defineProps({ event: Object })
 const emit = defineEmits(['edit', 'delete', 'share', 'close'])
@@ -10,30 +11,17 @@ const confirming = ref(false)
 const when = computed(() => formatWhen(props.event, lang.value))
 const accent = computed(() => props.event.color || 'var(--accent)')
 
-function filename () {
-  const base = (props.event.title || 'evento').replace(/[^\w\d-]+/g, '-').slice(0, 40) || 'evento'
-  return `${base}.ics`
-}
-
-function blobUrl () {
-  return URL.createObjectURL(new Blob([eventToICS(props.event)], { type: 'text/calendar' }))
+function icsBlob () {
+  return new Blob([eventToICS(props.event)], { type: 'text/calendar' })
 }
 
 function exportIcs () {
-  const a = document.createElement('a')
-  a.href = blobUrl()
-  a.download = filename()
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000)
+  downloadBlob(icsBlob(), safeFilename(props.event.title, 'evento', 'ics'))
 }
 
 // Abre el .ics para que el SO ofrezca añadirlo al calendario del dispositivo.
 function addToCalendar () {
-  const url = blobUrl()
-  window.open(url, '_blank')
-  setTimeout(() => URL.revokeObjectURL(url), 8000)
+  openBlob(icsBlob())
 }
 </script>
 

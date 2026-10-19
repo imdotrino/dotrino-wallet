@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { t } from '@/i18n.js'
 import { qrSvg } from '@dotrino/qr/svg'
 import { b64ToBytes } from '@/lib/pkpass.js'
+import { downloadBlob, openBlob, safeFilename } from '@/lib/download.js'
 
 const props = defineProps({ pass: Object })
 const emit = defineEmits(['delete', 'share', 'close'])
@@ -23,16 +24,10 @@ function pkpassBlob () {
   return new Blob([b64ToBytes(props.pass.rawB64)], { type: 'application/vnd.apple.pkpass' })
 }
 function exportPkpass () {
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(pkpassBlob())
-  a.download = `${(props.pass.title || 'pase').replace(/[^\w\d-]+/g, '-').slice(0, 40)}.pkpass`
-  document.body.appendChild(a); a.click(); a.remove()
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000)
+  downloadBlob(pkpassBlob(), safeFilename(props.pass.title, 'pase', 'pkpass'))
 }
 function openInWallet () {
-  const url = URL.createObjectURL(pkpassBlob())
-  window.open(url, '_blank')
-  setTimeout(() => URL.revokeObjectURL(url), 8000)
+  openBlob(pkpassBlob())
 }
 
 // El QR lo dibuja el pilar (@dotrino/qr). PDF417/Aztec/Code128 no se rasterizan:
