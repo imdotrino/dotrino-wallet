@@ -13,8 +13,10 @@ const props = defineProps({
 const emit = defineEmits(['import', 'cancel'])
 
 const text = ref(props.prefill || '')
-const pendingPasses = ref([...props.prefillPasses]) // pases ya parseados (binarios)
+/** @type {import('vue').Ref<(WalletPassData & { type: 'pass' })[]>} */
+const pendingPasses = ref([.../** @type {(WalletPassData & { type: 'pass' })[]} */ (props.prefillPasses)]) // pases ya parseados (binarios)
 const dragging = ref(false)
+/** @type {import('vue').Ref<HTMLInputElement | null>} */
 const fileInput = ref(null)
 const error = ref('')
 
@@ -26,6 +28,7 @@ const total = computed(() => events.value.length + contacts.value.length + pendi
 const fromContent = computed(() => (props.prefill && props.prefill.trim().length > 0) || props.prefillPasses.length > 0)
 
 const summary = computed(() => {
+  /** @type {(n: number, s: string, p: string) => string} */
   const w = (n, s, p) => `${n} ${n === 1 ? t('words.' + s) : t('words.' + p)}`
   const parts = []
   if (events.value.length) parts.push(w(events.value.length, 'event', 'events'))
@@ -34,6 +37,7 @@ const summary = computed(() => {
   return parts.length ? `${parts.join(' · ')} ${t('detected')}` : ''
 })
 
+/** @param {FileList | File[] | null | undefined} files */
 async function handleFiles (files) {
   error.value = ''
   for (const f of Array.from(files || [])) {
@@ -45,6 +49,10 @@ async function handleFiles (files) {
   }
 }
 
+/**
+ * @param {File} f
+ * @param {ArrayBuffer} [buf]
+ */
 async function addPass (f, buf) {
   try {
     const ab = buf || (await f.arrayBuffer())
@@ -55,7 +63,10 @@ async function addPass (f, buf) {
   }
 }
 
+/** @param {DragEvent} e */
 function onDrop (e) { dragging.value = false; handleFiles(e.dataTransfer?.files) }
+/** @param {Event} e */
+function onPicked (e) { handleFiles(/** @type {HTMLInputElement} */ (e.target).files) }
 function pick () { fileInput.value?.click() }
 
 function doImport () {
@@ -89,7 +100,7 @@ function doImport () {
       <!-- Sin `accept` restrictivo: en móvil el selector OCULTA/agrisa .ics y .pkpass
            cuando el SO no reconoce su MIME (un .pkpass es un zip → application/octet-stream;
            un .ics a veces text/plain). El tipo real se valida en handleFiles(). -->
-      <input ref="fileInput" type="file" multiple style="display:none" @change="handleFiles($event.target.files)" />
+      <input ref="fileInput" type="file" multiple style="display:none" @change="onPicked" />
 
       <!-- Modo ARCHIVO: vista limpia de lo detectado (chips), sin textarea crudo. -->
       <div v-if="fromContent && total" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">

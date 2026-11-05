@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 
-const props = defineProps({ pass: Object })
+const props = defineProps({ pass: { type: /** @type {import('vue').PropType<WalletItem>} */ (Object), required: true } })
 defineEmits(['open'])
 
 const bg = computed(() => props.pass.colors?.bg || '#1b222d')

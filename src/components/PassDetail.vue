@@ -5,7 +5,7 @@ import { qrSvg } from '@dotrino/qr/svg'
 import { b64ToBytes } from '@/lib/pkpass.js'
 import { downloadBlob, openBlob, safeFilename } from '@/lib/download.js'
 
-const props = defineProps({ pass: Object })
+const props = defineProps({ pass: { type: /** @type {import('vue').PropType<WalletItem>} */ (Object), required: true } })
 const emit = defineEmits(['delete', 'share', 'close'])
 
 const confirming = ref(false)
@@ -15,13 +15,14 @@ const label = computed(() => props.pass.colors?.label || fg.value)
 const isQR = computed(() => (props.pass.barcode?.format || '').toUpperCase() === 'QR')
 
 const allFields = computed(() => {
-  const f = props.pass.fields || {}
+  const f = /** @type {Partial<WalletPassData['fields']>} */ (props.pass.fields || {})
   return [...(f.primary || []), ...(f.secondary || []), ...(f.auxiliary || []), ...(f.header || []), ...(f.back || [])]
     .filter((x) => x.label || x.value)
 })
 
 function pkpassBlob () {
-  return new Blob([b64ToBytes(props.pass.rawB64)], { type: 'application/vnd.apple.pkpass' })
+  // Un pase guardado siempre trae su .pkpass original (se importa así).
+  return new Blob([/** @type {BlobPart} */ (b64ToBytes(/** @type {string} */ (props.pass.rawB64)))], { type: 'application/vnd.apple.pkpass' })
 }
 function exportPkpass () {
   downloadBlob(pkpassBlob(), safeFilename(props.pass.title, 'pase', 'pkpass'))
@@ -39,7 +40,7 @@ const qr = computed(() => {
     return qrSvg(String(msg), { ecc: 'M', margin: 1 })
   } catch (e) {
     // Solo si el mensaje no cabe en un QR: se dice y queda el texto alternativo.
-    console.error('[wallet] could not render the pass QR:', e?.message || e)
+    console.error('[wallet] could not render the pass QR:', /** @type {Error} */ (e)?.message || e)
     return ''
   }
 })

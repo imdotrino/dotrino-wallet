@@ -4,12 +4,12 @@ import { t } from '@/i18n.js'
 import { contactToVCF } from '@/lib/vcf.js'
 import { downloadBlob, safeFilename } from '@/lib/download.js'
 
-const props = defineProps({ contact: Object })
+const props = defineProps({ contact: { type: /** @type {import('vue').PropType<WalletItem>} */ (Object), required: true } })
 const emit = defineEmits(['edit', 'delete', 'share', 'close'])
 
 const confirming = ref(false)
 const accent = computed(() => props.contact.color || 'var(--accent-2)')
-const initials = computed(() => (props.contact.fn || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase())
+const initials = computed(() => (props.contact.fn || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((/** @type {string} */ w) => w[0]).join('').toUpperCase())
 
 function exportVcf () {
   downloadBlob(new Blob([contactToVCF(props.contact)], { type: 'text/vcard' }), safeFilename(props.contact.fn, 'contacto', 'vcf'))

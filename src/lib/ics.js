@@ -18,6 +18,13 @@ const PRODID = '-//Dotrino//Wallet//ES'
 //   local: cadena de pared 'YYYY-MM-DDTHH:MM' (o 'YYYY-MM-DD' si allDay)
 //   ms: epoch para ordenar/agrupar (UTC se interpreta como instante real;
 //       TZID/flotante se interpretan como hora local del dispositivo).
+/** @typedef {{ start?: string, allDay?: boolean, rrule?: string | null }} WhenLike */
+
+/**
+ * @param {string} value
+ * @param {Record<string, string>} params
+ * @returns {{ allDay: boolean, local: string, ms: number } | null}
+ */
 function parseDate (value, params) {
   const v = (value || '').trim()
   const isDate = params.VALUE === 'DATE' || /^\d{8}$/.test(v)
@@ -40,12 +47,22 @@ function parseDate (value, params) {
 }
 
 // Date → 'YYYY-MM-DDTHH:MM' en hora local (apto para <input type=datetime-local>).
+/**
+ * @param {Date} dt
+ * @returns {string}
+ */
 export function toLocalInput (dt) {
+  /** @param {number} n */
   const p = (n) => String(n).padStart(2, '0')
   return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}T${p(dt.getHours())}:${p(dt.getMinutes())}`
 }
 
 // 'YYYY-MM-DD[THH:MM]' → epoch ms (hora local).
+/**
+ * @param {string | null | undefined} local
+ * @param {boolean | undefined} allDay
+ * @returns {number}
+ */
 export function localToMs (local, allDay) {
   if (!local) return 0
   if (allDay) {
@@ -56,12 +73,18 @@ export function localToMs (local, allDay) {
 }
 
 // epoch ms en local → básico iCalendar UTC 'YYYYMMDDTHHMMSSZ'
+/**
+ * @param {number} ms
+ * @returns {string}
+ */
 function msToUtcBasic (ms) {
   const dt = new Date(ms)
+  /** @param {number} n */
   const p = (n) => String(n).padStart(2, '0')
   return `${dt.getUTCFullYear()}${p(dt.getUTCMonth() + 1)}${p(dt.getUTCDate())}T${p(dt.getUTCHours())}${p(dt.getUTCMinutes())}${p(dt.getUTCSeconds())}Z`
 }
 
+/** @param {string} local */
 function localDateBasic (local) {
   return local.slice(0, 10).replace(/-/g, '')
 }
@@ -70,11 +93,18 @@ function localDateBasic (local) {
 
 // Parsea texto .ics → { events: [...], count }.
 // Cada evento: { uid, title, location, description, url, allDay, start, end, tz, rrule, raw }
+/**
+ * @param {unknown} text
+ * @returns {{ events: WalletEventData[], count: number }}
+ */
 export function parseICS (text) {
   const lines = unfold(text).split('\n')
+  /** @type {WalletEventData[]} */
   const events = []
+  /** @type {WalletEventData | null} */
   let cur = null
-  let rawLines = null
+  /** @type {string[]} */
+  let rawLines = []
   for (const raw of lines) {
     const line = raw.replace(/\r$/, '')
     if (!line) continue
@@ -90,7 +120,7 @@ export function parseICS (text) {
         if (cur.start) events.push(cur)
       }
       cur = null
-      rawLines = null
+      rawLines = []
       continue
     }
     if (!cur) continue
@@ -120,13 +150,17 @@ export function parseICS (text) {
 
 // ---------- serialize ----------
 
+/**
+ * @param {Partial<WalletEventData>} ev
+ * @returns {string}
+ */
 export function eventToICS (ev) {
   const uid = ev.uid || `${newId()}@wallet.dotrino.com`
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', `PRODID:${PRODID}`, 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT']
   lines.push(`UID:${uid}`)
   lines.push(`DTSTAMP:${msToUtcBasic(Date.now())}`)
   if (ev.allDay) {
-    lines.push(`DTSTART;VALUE=DATE:${localDateBasic(ev.start)}`)
+    lines.push(`DTSTART;VALUE=DATE:${localDateBasic(/** @type {string} */ (ev.start))}`)
     if (ev.end) lines.push(`DTEND;VALUE=DATE:${localDateBasic(ev.end)}`)
   } else {
     lines.push(`DTSTART:${msToUtcBasic(localToMs(ev.start, false))}`)
@@ -144,9 +178,15 @@ export function eventToICS (ev) {
 
 // ---------- recurrencia (best-effort) ----------
 
+/** @type {Record<string, 'day' | 'week' | 'month' | 'year'>} */
 const RR_FREQ_STEP = { DAILY: 'day', WEEKLY: 'week', MONTHLY: 'month', YEARLY: 'year' }
 
+/**
+ * @param {string | null | undefined} rrule
+ * @returns {Record<string, string>}
+ */
 function parseRRule (rrule) {
+  /** @type {Record<string, string>} */
   const out = {}
   for (const part of String(rrule || '').split(';')) {
     const [k, v] = part.split('=')
@@ -157,6 +197,11 @@ function parseRRule (rrule) {
 
 // Próxima ocurrencia >= fromMs (ms). null si no recurre o ya terminó.
 // Soporta FREQ DAILY/WEEKLY/MONTHLY/YEARLY con INTERVAL, COUNT y UNTIL.
+/**
+ * @param {WhenLike} ev
+ * @param {number} fromMs
+ * @returns {number | null}
+ */
 export function nextOccurrenceMs (ev, fromMs) {
   if (!ev.rrule) return null
   const rr = parseRRule(ev.rrule)
@@ -185,6 +230,12 @@ export function nextOccurrenceMs (ev, fromMs) {
 
 // ---------- formato humano ----------
 
+/**
+ * @param {WhenLike} ev
+ * @param {string} lang
+ * @param {number} [now]
+ * @returns {string}
+ */
 export function formatWhen (ev, lang, now = Date.now()) {
   const locale = lang === 'en' ? 'en-US' : 'es-ES'
   let ms = localToMs(ev.start, ev.allDay)
@@ -202,6 +253,11 @@ export function formatWhen (ev, lang, now = Date.now()) {
 }
 
 // epoch ms efectivo para ordenar (próxima ocurrencia si recurre).
+/**
+ * @param {WhenLike} ev
+ * @param {number} [now]
+ * @returns {number}
+ */
 export function effectiveMs (ev, now = Date.now()) {
   if (ev.rrule) {
     const next = nextOccurrenceMs(ev, now)

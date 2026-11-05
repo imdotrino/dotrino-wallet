@@ -10,8 +10,10 @@ import { getIdentity } from '@/services/identity.js'
 const THREAD = 'items'
 const APP_ID = 'wallet.dotrino.com'
 
+/** @type {import('@dotrino/store').Store | null} */
 let store = null
 
+/** @returns {Promise<import('@dotrino/store').Store>} */
 export async function getStore () {
   if (store) return store
   // Atado al PERFIL: así lo tuyo se respalda en tu bóveda y no se mezcla con otras
@@ -27,16 +29,21 @@ export async function getStore () {
   return store
 }
 
+/** @returns {Promise<WalletItem[]>} */
 export async function loadItems () {
   const s = await getStore()
   const entries = await s.listThread(THREAD, { limit: 5000 })
-  return entries.filter((e) => e && e.id && e.type)
+  return /** @type {WalletItem[]} */ (entries.filter((/** @type {any} */ e) => e && e.id && e.type))
 }
 
-// Upsert: si ya existe una entrada con ese id la reemplaza.
+/**
+ * Upsert: si ya existe una entrada con ese id la reemplaza.
+ * @param {Omit<WalletItem, 'id'> & { id?: string }} item
+ * @returns {Promise<WalletItem>}
+ */
 export async function saveItem (item) {
   const s = await getStore()
-  const entry = { ...item }
+  const entry = /** @type {WalletItem} */ ({ ...item })
   if (!entry.id) entry.id = newId()
   entry.ts = Date.now()
   await s.removeMessage(THREAD, entry.id).catch(() => {})
@@ -44,6 +51,7 @@ export async function saveItem (item) {
   return entry
 }
 
+/** @param {string} id */
 export async function deleteItem (id) {
   const s = await getStore()
   await s.removeMessage(THREAD, id)

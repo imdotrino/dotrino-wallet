@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { formatWhen } from '@/lib/ics.js'
 import { lang, t } from '@/i18n.js'
 
-const props = defineProps({ event: Object })
+const props = defineProps({ event: { type: /** @type {import('vue').PropType<WalletItem>} */ (Object), required: true } })
 defineEmits(['open'])
 
 const when = computed(() => formatWhen(props.event, lang.value))

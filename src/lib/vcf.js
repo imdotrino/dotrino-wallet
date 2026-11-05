@@ -7,6 +7,7 @@ import { unfold, unescapeText, escapeText, foldLine, parseLine as parseTextLine 
 
 // "group.NAME;PARAM=val:VALUE" → { name, params, value }. En vCard se quita el
 // group ("item1.") y los parámetros sueltos (vCard 2.1: "TEL;CELL") van a TYPE.
+/** @param {string} line */
 function parseLine (line) {
   return parseTextLine(line, {
     stripGroup: true,
@@ -14,12 +15,21 @@ function parseLine (line) {
   })
 }
 
+/**
+ * @param {Record<string, string>} params
+ * @returns {string}
+ */
 function typeLabel (params) {
   const raw = (params.TYPE || '').toLowerCase()
   if (!raw) return ''
   return raw.split(',').filter((x) => x && x !== 'pref' && x !== 'voice')[0] || ''
 }
 
+/**
+ * @param {string} value
+ * @param {Record<string, string>} params
+ * @returns {string}
+ */
 function photoDataUri (value, params) {
   const v = (value || '').trim()
   if (!v) return ''
@@ -33,10 +43,18 @@ function photoDataUri (value, params) {
 }
 
 // Parsea texto .vcf → { contacts: [...], count }
+/**
+ * @param {unknown} text
+ * @returns {{ contacts: WalletContactData[], count: number }}
+ */
 export function parseVCF (text) {
   const lines = unfold(text).split('\n')
+  /** @type {WalletContactData[]} */
   const contacts = []
-  let cur = null, rawLines = null
+  /** @type {WalletContactData | null} */
+  let cur = null
+  /** @type {string[]} */
+  let rawLines = []
   for (const raw of lines) {
     const line = raw.replace(/\r$/, '')
     if (!line) continue
@@ -53,7 +71,7 @@ export function parseVCF (text) {
         if (!cur.fn) cur.fn = deriveName(cur)
         contacts.push(cur)
       }
-      cur = null; rawLines = null
+      cur = null; rawLines = []
       continue
     }
     if (!cur) continue
@@ -85,13 +103,21 @@ export function parseVCF (text) {
   return { contacts, count: contacts.length }
 }
 
+/**
+ * @param {Partial<WalletContactData>} c
+ * @returns {string}
+ */
 function deriveName (c) {
   if (c.n) return [c.n.given, c.n.family].filter(Boolean).join(' ').trim()
-  if (c.emails[0]) return c.emails[0].value
-  if (c.tels[0]) return c.tels[0].value
+  if (c.emails?.[0]) return c.emails[0].value
+  if (c.tels?.[0]) return c.tels[0].value
   return ''
 }
 
+/**
+ * @param {Partial<WalletContactData>} c
+ * @returns {string}
+ */
 export function contactToVCF (c) {
   const lines = ['BEGIN:VCARD', 'VERSION:3.0']
   lines.push(`FN:${escapeText(c.fn || deriveName(c))}`)
@@ -114,6 +140,10 @@ export function contactToVCF (c) {
 }
 
 // Clave de orden alfabético (apellido si hay N, si no FN).
+/**
+ * @param {Partial<WalletContactData>} c
+ * @returns {string}
+ */
 export function sortKey (c) {
   if (c.n && c.n.family) return (c.n.family + ' ' + (c.n.given || '')).toLowerCase()
   return (c.fn || '').toLowerCase()

@@ -3,7 +3,7 @@ import { reactive, ref, watch } from 'vue'
 import { t } from '@/i18n.js'
 import { toLocalInput } from '@/lib/ics.js'
 
-const props = defineProps({ event: Object })
+const props = defineProps({ event: { type: /** @type {import('vue').PropType<WalletItem | null>} */ (Object), default: null } })
 const emit = defineEmits(['save', 'cancel'])
 
 const COLORS = ['#f4b740', '#4dd0c4', '#ff6b6b', '#9b8cff', '#6fcf73', '#ff9f43', '#5aa9ff']
@@ -23,6 +23,7 @@ function blank () {
 const form = reactive(props.event ? normalize({ ...props.event }) : blank())
 const error = ref('')
 
+/** @param {Partial<WalletItem>} e */
 function normalize (e) {
   // Asegura formato de input según allDay.
   if (e.allDay) {
@@ -48,8 +49,10 @@ watch(() => form.allDay, (allDay) => {
 })
 
 function submit () {
-  if (!form.title.trim()) { error.value = t('titleRequired'); return }
-  emit('save', { ...form, title: form.title.trim() })
+  // Un evento importado sin SUMMARY no trae título: antes esto lanzaba un TypeError al guardar.
+  const title = (form.title || '').trim()
+  if (!title) { error.value = t('titleRequired'); return }
+  emit('save', { ...form, title })
 }
 </script>
 

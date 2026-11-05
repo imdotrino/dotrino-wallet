@@ -1,12 +1,12 @@
 <script setup>
 import { computed } from 'vue'
 
-const props = defineProps({ contact: Object })
+const props = defineProps({ contact: { type: /** @type {import('vue').PropType<WalletItem>} */ (Object), required: true } })
 defineEmits(['open'])
 
 const initials = computed(() => {
   const n = props.contact.fn || ''
-  return n.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?'
+  return n.split(/\s+/).filter(Boolean).slice(0, 2).map((/** @type {string} */ w) => w[0]).join('').toUpperCase() || '?'
 })
 const subtitle = computed(() => {
   const c = props.contact

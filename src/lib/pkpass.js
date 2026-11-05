@@ -7,27 +7,44 @@
 // añadir a la Wallet nativa, que sí la valida).
 
 // ---------- base64 ----------
+/**
+ * @param {Uint8Array} bytes
+ * @returns {string}
+ */
 export function bytesToB64 (bytes) {
   let bin = ''
   const chunk = 0x8000
   for (let i = 0; i < bytes.length; i += chunk) {
-    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk))
+    bin += String.fromCharCode.apply(null, /** @type {number[]} */ (/** @type {unknown} */ (bytes.subarray(i, i + chunk))))
   }
   return btoa(bin)
 }
+/**
+ * @param {string} b64
+ * @returns {Uint8Array}
+ */
 export function b64ToBytes (b64) {
   const bin = atob(b64)
   return Uint8Array.from(bin, (c) => c.charCodeAt(0))
 }
 
 // ---------- ZIP ----------
+/**
+ * @param {Uint8Array} bytes
+ * @returns {Promise<Uint8Array>}
+ */
 async function inflateRaw (bytes) {
   const ds = new DecompressionStream('deflate-raw')
-  const stream = new Blob([bytes]).stream().pipeThrough(ds)
+  // TS 5.9 no acepta Uint8Array<ArrayBufferLike> como BlobPart; en el navegador vale.
+  const stream = new Blob([/** @type {BlobPart} */ (bytes)]).stream().pipeThrough(ds)
   return new Uint8Array(await new Response(stream).arrayBuffer())
 }
 
 // Lee el ZIP y devuelve { 'pass.json': Uint8Array, ... }
+/**
+ * @param {ArrayBuffer} arrayBuffer
+ * @returns {Promise<Record<string, Uint8Array>>}
+ */
 async function unzip (arrayBuffer) {
   const buf = new Uint8Array(arrayBuffer)
   const dv = new DataView(arrayBuffer)
@@ -40,6 +57,7 @@ async function unzip (arrayBuffer) {
   const count = dv.getUint16(eocd + 10, true)
   let off = dv.getUint32(eocd + 16, true) // offset del central directory
   const td = new TextDecoder()
+  /** @type {Record<string, Uint8Array>} */
   const out = {}
   for (let n = 0; n < count; n++) {
     if (dv.getUint32(off, true) !== 0x02014b50) break
@@ -66,21 +84,35 @@ async function unzip (arrayBuffer) {
 // ---------- pass.json → modelo neutro ----------
 const STYLES = ['boardingPass', 'coupon', 'eventTicket', 'generic', 'storeCard']
 
+/** @param {Uint8Array | null} bytes */
 function imgDataUri (bytes) {
   if (!bytes) return ''
   return `data:image/png;base64,${bytesToB64(bytes)}`
 }
 
+/**
+ * @param {Record<string, Uint8Array>} files
+ * @param {string} base
+ * @returns {Uint8Array | null}
+ */
 function pickImage (files, base) {
   return files[base + '@2x.png'] || files[base + '.png'] || files[base + '@3x.png'] || null
 }
 
+/**
+ * @param {string | undefined} iso
+ * @returns {number | null}
+ */
 function toMs (iso) {
   if (!iso) return null
   const t = Date.parse(iso)
   return Number.isNaN(t) ? null : t
 }
 
+/**
+ * @param {Array<{ label?: string, value?: unknown }> | undefined} arr
+ * @returns {PassField[]}
+ */
 function mapFields (arr) {
   return (arr || []).map((f) => ({
     label: f.label || '',
@@ -88,6 +120,10 @@ function mapFields (arr) {
   }))
 }
 
+/**
+ * @param {ArrayBuffer} arrayBuffer
+ * @returns {Promise<WalletPassData>}
+ */
 export async function parsePkpass (arrayBuffer) {
   const files = await unzip(arrayBuffer)
   if (!files['pass.json']) throw new Error('the .pkpass does not contain pass.json')
@@ -129,6 +165,10 @@ export async function parsePkpass (arrayBuffer) {
 }
 
 // Detecta si un ArrayBuffer es un ZIP (magic 'PK\x03\x04').
+/**
+ * @param {ArrayBuffer} arrayBuffer
+ * @returns {boolean}
+ */
 export function looksLikeZip (arrayBuffer) {
   const b = new Uint8Array(arrayBuffer.slice(0, 4))
   return b[0] === 0x50 && b[1] === 0x4b && (b[2] === 3 || b[2] === 5 || b[2] === 7)

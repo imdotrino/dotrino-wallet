@@ -169,6 +169,7 @@ function detect () {
 
 export const lang = ref(detect())
 
+/** @param {string} l 'es' o 'en'; otro valor se ignora */
 export function setLang (l) {
   if (l !== 'es' && l !== 'en') return
   lang.value = l
@@ -176,12 +177,16 @@ export function setLang (l) {
   document.documentElement.lang = l
 }
 
-// t('groups.today') con acceso por puntos.
+/**
+ * t('groups.today') con acceso por puntos.
+ * @param {string} key
+ * @returns {any} el texto, o lo que haya en esa ruta (un objeto, si la clave es un grupo)
+ */
 export function t (key) {
-  const dict = messages[lang.value] || messages.es
-  return key.split('.').reduce((o, k) => (o == null ? o : o[k]), dict) ?? key
+  const dict = /** @type {Record<string, any>} */ (messages)[lang.value] || messages.es
+  return key.split('.').reduce((/** @type {any} */ o, k) => (o == null ? o : o[k]), dict) ?? key
 }
 
-export const tt = computed(() => (key) => t(key))
+export const tt = computed(() => (/** @type {string} */ key) => t(key))
 
 document.documentElement.lang = lang.value

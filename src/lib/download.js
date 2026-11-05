@@ -2,11 +2,21 @@
 // detalles de evento (.ics), contacto (.vcf) y pase (.pkpass).
 
 // Nombre de archivo seguro a partir de un título libre; `fallback` si queda vacío.
+/**
+ * @param {string | undefined} title
+ * @param {string} fallback
+ * @param {string} ext
+ * @returns {string}
+ */
 export function safeFilename (title, fallback, ext) {
   const base = (title || fallback).replace(/[^\w\d-]+/g, '-').slice(0, 40) || fallback
   return `${base}.${ext}`
 }
 
+/**
+ * @param {Blob} blob
+ * @param {string} filename
+ */
 export function downloadBlob (blob, filename) {
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
@@ -18,6 +28,7 @@ export function downloadBlob (blob, filename) {
 }
 
 // Abre el Blob en otra pestaña para que el sistema ofrezca su app (calendario, Wallet).
+/** @param {Blob} blob */
 export function openBlob (blob) {
   const url = URL.createObjectURL(blob)
   window.open(url, '_blank')

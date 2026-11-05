@@ -2,11 +2,12 @@
 import { reactive, ref } from 'vue'
 import { t } from '@/i18n.js'
 
-const props = defineProps({ contact: Object })
+const props = defineProps({ contact: { type: /** @type {import('vue').PropType<WalletItem | null>} */ (Object), default: null } })
 const emit = defineEmits(['save', 'cancel'])
 
 const COLORS = ['#4dd0c4', '#f4b740', '#ff6b6b', '#9b8cff', '#6fcf73', '#ff9f43', '#5aa9ff']
 
+/** @param {Partial<WalletItem>} c */
 function fromContact (c) {
   return {
     id: c.id || '', fn: c.fn || '', org: c.org || '', jobTitle: c.jobTitle || c.title || '',

@@ -4,10 +4,18 @@
 // los dos parsers (ics.js y vcf.js).
 
 // Desdobla líneas plegadas (CRLF/LF seguido de espacio o tab continúa la línea).
+/**
+ * @param {unknown} text
+ * @returns {string}
+ */
 export function unfold (text) {
   return String(text || '').replace(/\r\n/g, '\n').replace(/\n[ \t]/g, '')
 }
 
+/**
+ * @param {unknown} s
+ * @returns {string}
+ */
 export function escapeText (s) {
   return String(s == null ? '' : s)
     .replace(/\\/g, '\\\\')
@@ -16,6 +24,10 @@ export function escapeText (s) {
     .replace(/\r?\n/g, '\\n')
 }
 
+/**
+ * @param {unknown} s
+ * @returns {string}
+ */
 export function unescapeText (s) {
   return String(s == null ? '' : s)
     .replace(/\\n/gi, '\n')
@@ -25,7 +37,12 @@ export function unescapeText (s) {
 }
 
 // Pliega una línea a <=75 octetos (aprox. por caracteres) con CRLF + espacio.
+/**
+ * @param {string} line
+ * @returns {string}
+ */
 export function foldLine (line) {
+  /** @type {string[]} */
   const out = []
   let s = line
   while (s.length > 75) {
@@ -41,7 +58,7 @@ export function foldLine (line) {
  * @param {string} line
  * @param {object} [opts]
  * @param {boolean} [opts.stripGroup=false]  quita el prefijo de grupo ("item1.") del nombre (vCard)
- * @param {(params: object, raw: string) => void} [opts.onBareParam]  qué hacer con un
+ * @param {(params: Record<string,string>, raw: string) => void} [opts.onBareParam]  qué hacer con un
  *   parámetro sin "=" (vCard 2.1: "TEL;CELL"); por defecto se ignora
  * @returns {{ name: string, params: Record<string,string>, value: string }}
  */
@@ -55,6 +72,7 @@ export function parseLine (line, { stripGroup = false, onBareParam } = {}) {
   }
   const head = line.slice(0, i)
   const value = line.slice(i + 1)
+  /** @type {string[]} */
   const parts = []
   let cur = ''
   inQuotes = false
@@ -65,8 +83,9 @@ export function parseLine (line, { stripGroup = false, onBareParam } = {}) {
   }
   parts.push(cur)
   let name = parts[0]
-  if (stripGroup && name.includes('.')) name = name.split('.').pop()
+  if (stripGroup && name.includes('.')) name = /** @type {string} */ (name.split('.').pop())
   name = name.toUpperCase()
+  /** @type {Record<string, string>} */
   const params = {}
   for (const p of parts.slice(1)) {
     const eq = p.indexOf('=')

@@ -23,26 +23,40 @@ import iconUrl from '/icon.svg'
 
 const store = useWallet()
 
+/** @typedef {WalletPassData & { type: 'pass', rawB64: string }} ParsedPass */
+/** @typedef {HTMLElement & { url: string, text: string, open: boolean }} ShareElement  <dotrino-share> */
+/** @typedef {HTMLElement & { identity: unknown, reputation: unknown, store: unknown }} TopbarElement  <dotrino-topbar> */
+
+/** @type {WalletItemType[]} */
 const TABS = ['event', 'contact', 'pass']
+/** @type {('today' | 'week' | 'upcoming' | 'past')[]} */
 const GROUP_ORDER = ['today', 'week', 'upcoming', 'past']
 
+/** @type {import('vue').Ref<{ type: WalletItemType, item: WalletItem } | null>} */
 const detail = ref(null)          // { type, item }
 const showEventForm = ref(false)
+/** @type {import('vue').Ref<WalletItem | null>} */
 const editingEvent = ref(null)
 const showContactForm = ref(false)
+/** @type {import('vue').Ref<WalletItem | null>} */
 const editingContact = ref(null)
 const showImport = ref(false)
 const importPrefill = ref('')
+/** @type {import('vue').Ref<ParsedPass[]>} */
 const importPrefillPasses = ref([])
 const toast = ref('')
+/** @type {import('vue').Ref<ShareElement | null>} */
 const shareEl = ref(null)
 
 // ---------- topbar del ecosistema (§5) + "Mi perfil" (§6.1) ----------
 // El modal de perfil lo abre y lo posee el propio <dotrino-topbar>: le pasamos
 // los pilares (identidad + reputación) y el tema por PROPIEDAD JS, y con eso
 // deriva pubkey, nombre y avatar del perfil activo.
+/** @type {import('vue').Ref<TopbarElement | null>} */
 const topbarRef = ref(null)
+/** @type {import('vue').ShallowRef<import('@dotrino/identity').Identity | null>} */
 const identityInst = ref(null)
+/** @type {import('vue').Ref<unknown>} */
 const reputationInst = ref(null)
 
 watchEffect(() => {
@@ -61,24 +75,30 @@ watchEffect(() => {
 
 // El toggle de idioma vive en el topbar y es la fuente de verdad (él ya lo
 // persistió en 'dotrino.lang'); aquí solo seguimos su evento.
+/** @param {CustomEvent<{ lang?: string }>} e */
 function onLang (e) {
   const l = e?.detail?.lang
   if (l === 'es' || l === 'en') setLang(l)
 }
 
+/** @param {string} msg */
 function flash (msg) {
   toast.value = msg
   setTimeout(() => { if (toast.value === msg) toast.value = '' }, 2200)
 }
 
 // ---------- base64url para #fragment ----------
+/** @param {string} b64 */
 function toUrlSafe (b64) { return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') }
+/** @param {string} s */
 function fromUrlSafe (s) { return s.replace(/-/g, '+').replace(/_/g, '/') }
+/** @param {string} str */
 function encodeText (str) {
   const bytes = new TextEncoder().encode(str)
   let bin = ''; bytes.forEach((b) => { bin += String.fromCharCode(b) })
   return toUrlSafe(btoa(bin))
 }
+/** @param {string} s */
 function decodeText (s) {
   const bin = atob(fromUrlSafe(s))
   return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)))
@@ -90,30 +110,44 @@ function openAdd () {
   else if (store.tab === 'contact') { editingContact.value = null; showContactForm.value = true }
   else openImport()
 }
+/**
+ * @param {string} [prefill]
+ * @param {ParsedPass[]} [passes]
+ */
 function openImport (prefill = '', passes = []) {
   importPrefill.value = prefill
   importPrefillPasses.value = passes
   showImport.value = true
 }
 
+/**
+ * @param {WalletItemType} type
+ * @param {WalletItem} item
+ */
 function openDetail (type, item) { detail.value = { type, item } }
 function closeDetail () { detail.value = null }
 
+/** @param {WalletItem} ev */
 function editEvent (ev) { closeDetail(); editingEvent.value = ev; showEventForm.value = true }
+/** @param {WalletItem} c */
 function editContact (c) { closeDetail(); editingContact.value = c; showContactForm.value = true }
 
+/** @param {Omit<WalletItem, 'id' | 'type'> & { id?: string }} ev */
 async function saveEvent (ev) {
   await store.upsert({ ...ev, type: 'event' })
   showEventForm.value = false; editingEvent.value = null
   store.tab = 'event'; flash(t('saved'))
 }
+/** @param {Omit<WalletItem, 'id' | 'type'> & { id?: string }} c */
 async function saveContact (c) {
   await store.upsert({ ...c, type: 'contact' })
   showContactForm.value = false; editingContact.value = null
   store.tab = 'contact'; flash(t('saved'))
 }
+/** @param {WalletItem} item */
 async function onDelete (item) { await store.remove(item.id); closeDetail(); flash(t('deleted')) }
 
+/** @param {WalletItem[]} items */
 async function onImport (items) {
   for (const it of items) await store.upsert(it)
   showImport.value = false
@@ -124,11 +158,12 @@ async function onImport (items) {
 }
 
 // ---------- compartir ----------
+/** @param {WalletItem} item */
 function shareItem (item) {
   let frag = ''
   if (item.type === 'event') frag = 'ev=' + encodeText(eventToICS(item))
   else if (item.type === 'contact') frag = 'vc=' + encodeText(contactToVCF(item))
-  else if (item.type === 'pass') frag = 'pk=' + toUrlSafe(item.rawB64)
+  else if (item.type === 'pass') frag = 'pk=' + toUrlSafe(/** @type {string} */ (item.rawB64))
   const el = shareEl.value
   if (!el) return
   el.url = `${location.origin}${location.pathname}#${frag}`
@@ -138,11 +173,19 @@ function shareItem (item) {
 }
 
 // ---------- importación AUTOMÁTICA (archivo / link / share): sin hoja ni Guardar ----------
+/**
+ * @param {string} text
+ * @param {ParsedPass[]} passes
+ */
 function buildItems (text, passes) {
   return buildImportItems({ events: parseICS(text || '').events, contacts: parseVCF(text || '').contacts, passes: passes || [] })
 }
 
 // Importa directo (con dedup en el store) y ABRE el ítem importado. Sin pasar por la hoja.
+/**
+ * @param {string} text
+ * @param {ParsedPass[]} passes
+ */
 async function importAndOpen (text, passes) {
   const items = buildItems(text, passes)
   if (!items.length) return
@@ -170,15 +213,17 @@ async function handleIncoming () {
     try {
       const rawB64 = fromUrlSafe(m[1])
       const bytes = b64ToBytes(rawB64)
-      const parsed = await parsePkpass(bytes.buffer)
+      const parsed = await parsePkpass(/** @type {ArrayBuffer} */ (bytes.buffer))
       await importAndOpen('', [{ ...parsed, type: 'pass', rawB64 }])
     } catch {}
   }
 }
 
 // ---------- archivos abiertos con la app (File Handling API / share-target) ----------
+/** @param {File[]} files */
 async function handleFiles (files) {
   let text = ''
+  /** @type {ParsedPass[]} */
   const passes = []
   for (const f of files) {
     if (!f) continue
@@ -194,8 +239,11 @@ async function handleFiles (files) {
 }
 
 function setupLaunchQueue () {
-  if (!('launchQueue' in window) || !('LaunchParams' in window) || !('files' in window.LaunchParams.prototype)) return
-  window.launchQueue.setConsumer(async (params) => {
+  // File Handling API: no está en lib.dom.
+  const w = /** @type {any} */ (window)
+  if (!('launchQueue' in window) || !('LaunchParams' in window) || !('files' in w.LaunchParams.prototype)) return
+  w.launchQueue.setConsumer(async (/** @type {{ files?: FileSystemFileHandle[] }} */ params) => {
+    /** @type {File[]} */
     const files = []
     for (const h of params.files || []) { try { files.push(await h.getFile()) } catch {} }
     if (files.length) await handleFiles(files)

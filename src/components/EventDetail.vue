@@ -4,7 +4,7 @@ import { t, lang } from '@/i18n.js'
 import { formatWhen, eventToICS } from '@/lib/ics.js'
 import { downloadBlob, openBlob, safeFilename } from '@/lib/download.js'
 
-const props = defineProps({ event: Object })
+const props = defineProps({ event: { type: /** @type {import('vue').PropType<WalletItem>} */ (Object), required: true } })
 const emit = defineEmits(['edit', 'delete', 'share', 'close'])
 
 const confirming = ref(false)

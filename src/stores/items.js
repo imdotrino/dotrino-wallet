@@ -7,9 +7,11 @@ import { sortKey } from '@/lib/vcf.js'
 const DAY = 86400000
 
 export const useWallet = defineStore('wallet', () => {
+  /** @type {import('vue').Ref<WalletItem[]>} */
   const items = ref([])
   const loading = ref(true)
   const query = ref('')
+  /** @type {import('vue').Ref<WalletItemType>} */
   const tab = ref('event') // 'event' | 'contact' | 'pass'
 
   async function load () {
@@ -17,6 +19,11 @@ export const useWallet = defineStore('wallet', () => {
     try { items.value = await loadItems() } finally { loading.value = false }
   }
 
+  /**
+   * @param {Partial<WalletItem>} a
+   * @param {Partial<WalletItem>} b
+   * @returns {boolean}
+   */
   function sameImported (a, b) {
     if (a.type !== b.type) return false
     if (a.type === 'event') return (!!a.uid && a.uid === b.uid) || (!!a.title && a.title === b.title && a.start === b.start)
@@ -25,8 +32,13 @@ export const useWallet = defineStore('wallet', () => {
     return false
   }
   // ¿Ya existe un ítem equivalente? (para distinguir "importado" de "ya existente").
+  /** @param {Partial<WalletItem>} item */
   function exists (item) { return items.value.some((e) => sameImported(e, item)) }
 
+  /**
+   * @param {Omit<WalletItem, 'id'> & { id?: string }} item
+   * @returns {Promise<WalletItem>}
+   */
   async function upsert (item) {
     // Dedup al IMPORTAR: si ya existe el mismo evento (uid o título+fecha) / pase (serial) /
     // contacto (nombre), reusar su id → actualiza en vez de duplicar. Solo para imports.
@@ -47,17 +59,23 @@ export const useWallet = defineStore('wallet', () => {
     return saved
   }
 
+  /** @param {string} id */
   async function remove (id) {
     await deleteItem(id)
     items.value = items.value.filter((e) => e.id !== id)
   }
 
   const counts = computed(() => {
+    /** @type {Record<WalletItemType, number>} */
     const c = { event: 0, contact: 0, pass: 0 }
     for (const it of items.value) if (c[it.type] != null) c[it.type]++
     return c
   })
 
+  /**
+   * @param {WalletItem} it
+   * @param {string} q
+   */
   function matches (it, q) {
     let hay = ''
     if (it.type === 'event') hay = [it.title, it.location, it.description].filter(Boolean).join(' ')
@@ -77,6 +95,7 @@ export const useWallet = defineStore('wallet', () => {
     const now = Date.now()
     const start = new Date(); start.setHours(0, 0, 0, 0)
     const todayStart = start.getTime()
+    /** @type {Record<'today' | 'week' | 'upcoming' | 'past', WalletItem[]>} */
     const buckets = { today: [], week: [], upcoming: [], past: [] }
     for (const e of visible.value) {
       const ms = effectiveMs(e, now)
@@ -85,6 +104,7 @@ export const useWallet = defineStore('wallet', () => {
       else if (ms < todayStart + 7 * DAY) buckets.week.push(e)
       else buckets.upcoming.push(e)
     }
+    /** @type {(a: WalletItem, b: WalletItem) => number} */
     const byMs = (a, b) => effectiveMs(a, now) - effectiveMs(b, now)
     buckets.today.sort(byMs); buckets.week.sort(byMs); buckets.upcoming.sort(byMs)
     buckets.past.sort((a, b) => effectiveMs(b, now) - effectiveMs(a, now))
